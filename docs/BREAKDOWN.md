@@ -464,13 +464,13 @@ All methods should receive:
 
 Method-specific learning rates may differ, but they must be selected during a small pilot and then documented and fixed.
 
-## Configuration 0: Unchanged model
+### Configuration 0: Unchanged model
 
 This model receives no additional training.
 
 It provides the starting quality baseline.
 
-## Configuration 1: Full-parameter continued pretraining
+### Configuration 1: Full-parameter continued pretraining
 
 Every model parameter can change.
 
@@ -480,7 +480,7 @@ Base model
 All parameters updated
 ```
 
-### Expected characteristics
+#### Expected characteristics
 
 * Highest memory use
 * Large checkpoints
@@ -488,7 +488,7 @@ All parameters updated
 * More expensive optimizer state
 * Useful baseline for judging LoRA
 
-## Configuration 2: LoRA continued pretraining
+### Configuration 2: LoRA continued pretraining
 
 The original model weights remain frozen. Small trainable adapter matrices are added to selected layers.
 
@@ -498,7 +498,7 @@ Frozen base model
 Trainable LoRA adapters
 ```
 
-### Expected characteristics
+#### Expected characteristics
 
 * Lower memory requirements
 * Much smaller saved artifacts
@@ -506,11 +506,11 @@ Trainable LoRA adapters
 * May approach full-training quality
 * Easier to run on constrained hardware
 
-## Configuration 3: QLoRA continued pretraining
+### Configuration 3: QLoRA continued pretraining
 
 The frozen base model is stored in a quantized representation while LoRA adapters are trained.
 
-### Expected characteristics
+#### Expected characteristics
 
 * Lowest model-weight memory
 * May enable larger batches
@@ -520,7 +520,7 @@ The frozen base model is stored in a quantized representation while LoRA adapter
 
 QLoRA should remain conditional. If the available environment cannot run it reliably, report that limitation rather than changing hardware midway through a comparison.
 
-## Model-adaptation measurements
+### Model-adaptation measurements
 
 For every method, record:
 
@@ -574,7 +574,7 @@ This phase examines diminishing returns. The model may improve substantially fro
 
 Hardware comparisons must be separated from software comparisons.
 
-## MacBook experiments
+### MacBook experiments
 
 The Mac can be used for:
 
@@ -593,7 +593,7 @@ Report:
 * Unified-memory use where measurable
 * CPU and accelerator utilization where available
 
-## NVIDIA experiments
+### NVIDIA experiments
 
 If university or rented hardware is available, run the final comparison set on one consistent NVIDIA GPU.
 
@@ -607,7 +607,7 @@ Report:
 
 Do not compare a LoRA run on the Mac with a full-training run on NVIDIA and claim that the training method caused the difference. Both conditions must run on the same hardware.
 
-## Optional multi-GPU experiment
+### Optional multi-GPU experiment
 
 If two identical NVIDIA GPUs are available:
 
@@ -644,11 +644,11 @@ FSDP, tensor parallelism, and pipeline parallelism are outside the core project 
 
 A fast training configuration is not useful if it damages the model.
 
-## Validation loss
+### Validation loss
 
 Validation loss measures prediction error on FineWeb-Edu documents excluded from training. Lower is better.
 
-## Perplexity
+### Perplexity
 
 Perplexity is derived from validation loss and roughly measures how surprised the model is by unseen text. Lower is better.
 
@@ -661,7 +661,7 @@ LoRA
 QLoRA
 ```
 
-## Educational benchmarks
+### Educational benchmarks
 
 Use a small fixed set such as:
 
