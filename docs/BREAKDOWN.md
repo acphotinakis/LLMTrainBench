@@ -1,757 +1,228 @@
-The project is a controlled study of how to continue training a small language model efficiently.
+# FineWeb Edu Continued Pretraining Project Breakdown
 
-You are not trying to invent a new model or build a chatbot. You are using one existing model and FineWeb-Edu as a test system to answer:
+This project is a controlled systems study of continued pretraining for one small causal language model. It measures how data preparation, adaptation method, dataset scale, and hardware affect throughput, memory, runtime, cost, and model quality. It does not attempt to create a chatbot or a new model architecture.
 
-> How do data preparation, training method, dataset size, and hardware affect training speed, memory use, cost, and model quality?
+`BREAKDOWN.md` is the authoritative high-level project plan. Exact run settings live in [EXPERIMENT_PROTOCOL.md](EXPERIMENT_PROTOCOL.md), data rules in [DATA_CARD.md](DATA_CARD.md), and metric definitions in [METRICS.md](METRICS.md). The `PHASE*.md` files contain phase-specific procedures and exit criteria; they must not redefine frozen settings.
 
-The current plan names Qwen2.5-0.5B. You could replace it with Pythia-410M or OLMo-1B, but you should choose one model before experimentation and keep it fixed.
+## Frozen Core Decisions
 
-## What continued pretraining means
+| Decision | Frozen value |
+|---|---|
+| Base model | `Qwen/Qwen2.5-0.5B` |
+| Model and tokenizer revision | `060db6499f32faf8b98477b0a26969ef7d8b9987` |
+| Dataset | `HuggingFaceFW/fineweb-edu`, configuration `sample-10BT`, split `train` |
+| Dataset revision | `87f09149ef4734204d70ed1d046ddc9ca3f2b8f9` |
+| Core framework | MLX with MLX-LM on macOS |
+| Core hardware | The project's Apple MacBook Pro with an M5-series chip and 48 GB unified memory; its exact hardware identifier is captured before official runs |
+| Sequence length | 1,024 tokens |
+| Training subsets | 9,999,360; 49,999,872; and 99,999,744 tokens |
+| Validation set | 1,024,000 tokens in 1,000 packed sequences |
+| Core adaptation methods | Full-parameter continued pretraining and LoRA |
+| Optional extensions | MLX QLoRA; NVIDIA replication; two-GPU DDP scaling |
+| Core random seeds | 17, 42, and 73 |
 
-FineWeb-Edu contains ordinary educational web documents. It does not contain questions, answers, or classification labels.
+The model and tokenizer use the same pinned revision. Changing the model, tokenizer, dataset revision, sequence length, or core hardware creates a new study and must be recorded in `DECISIONS.md`.
 
-The model receives sequences such as:
+## Hardware and Software Boundary
 
-```text
-Photosynthesis is the process through which plants convert...
-```
+All comparisons inside one experiment group run on the same physical machine and software environment. The Mac/MLX results are the official core results.
 
-It learns by predicting the next token. The expected continuation might begin with `light` .
+An NVIDIA run is an optional replication and is reported as a separate hardware stratum. It may reproduce a complete comparison on one NVIDIA system, but it cannot be combined with Mac measurements to claim that a training method or pipeline is faster. Two-GPU DDP is optional and requires two identical GPUs. FSDP, tensor parallelism, and pipeline parallelism are out of scope.
 
-The model repeats this process across millions of tokens. This is called continued pretraining because the model was already pretrained once and you are continuing that process with additional text.
-
----
+QLoRA is optional. Its absence does not make the core project incomplete. If performed with MLX on the Mac, it may join the adaptation comparison. If performed only on NVIDIA, it is reported as an NVIDIA-only extension and is not ranked against Mac full training or Mac LoRA.
 
 # Data
 
-TODO
+## Source Schema
 
----
+The pinned FineWeb-Edu sample exposes the original FineWeb fields `text`, `id`, `dump`, `url`, `date`, `file_path`, `language`, `language_score`, and `token_count`. FineWeb-Edu records may also expose `score`, `int_score`, and `dataset`. The builder validates the schema before processing, requires `text` and `id`, preserves every available source field, and stops with an error if either required field is absent.
+
+`token_count` is source metadata produced with the dataset's tokenizer. It is never used for experimental token accounting. Experimental counts always come from the pinned Qwen tokenizer.
+
+## Exact Filtering and Normalization
+
+For every streamed record, the builder performs these steps in order:
+
+1. Require `text` to be a string and `id` to be a nonempty string.
+2. Convert CRLF and CR line endings to LF and normalize Unicode to NFC.
+3. Remove leading and trailing whitespace. Do not collapse internal whitespace or alter punctuation.
+4. Reject text shorter than 200 Unicode code points.
+5. Reject text containing a NUL character.
+6. Reject text when Unicode replacement characters exceed 1% of code points.
+7. Reject text when disallowed control characters exceed 1% of code points. LF, tab, and form feed are allowed.
+8. Tokenize with the pinned Qwen tokenizer and reject documents containing fewer than 50 tokens before the separator is added.
+9. Do not apply an additional `score`, `int_score`, or `language_score` threshold. The selected source is already FineWeb-Edu, and another quality filter would change the research population.
+
+## Duplicate Handling Splitting and Ordering
+
+The pipeline removes duplicates before splitting:
+
+- Duplicate source IDs: keep the record with the lexicographically smallest SHA-256 digest of its normalized UTF-8 text.
+- Exact duplicate normalized text: compute SHA-256 over UTF-8 normalized text and keep the record with the lexicographically smallest source ID.
+- Near-duplicate detection is out of scope because FineWeb-Edu already includes upstream deduplication.
+
+Use SHA-256 for every deterministic decision; never use Python's process-randomized `hash()`.
+
+- Split key: `sha256("split:" + id)`. Interpret the first eight digest bytes as an unsigned big-endian integer. Remainders 0 through 94 modulo 100 are training; 95 through 99 are validation.
+- Ordering key: `sha256("order:" + id)`, ascending by full hexadecimal digest, with `id` as the tie-breaker.
+- Training and validation are ordered independently after splitting.
+
+The pipeline writes `train_doc_ids.txt` and `validation_doc_ids.txt`. A test must prove their intersection is empty.
+
+## Tokenization and Packing
+
+Tokenize normalized text without adding a BOS token or chat template. Append exactly one `tokenizer.eos_token_id` after every document. For the pinned model, the configuration records EOS ID `151643`; runtime code must also assert that the loaded tokenizer reports this value.
+
+Pack the resulting token stream with ordinary causal attention into non-overlapping sequences of exactly 1,024 tokens. Cross-document attention is allowed, with EOS marking each boundary. Drop the final incomplete sequence in each partition. Block-diagonal attention is not part of the core study.
+
+Create nested training datasets by taking the first packed sequences in deterministic order:
+
+| Name | Packed sequences | Exact tokens |
+|---|---:|---:|
+| `train_10m` | 9,765 | 9,999,360 |
+| `train_50m` | 48,828 | 49,999,872 |
+| `train_100m` | 97,656 | 99,999,744 |
+| `validation` | 1,000 | 1,024,000 |
+
+The builder continues streaming until all four targets can be created. The three training datasets must be nested byte-for-byte.
+
+## Data Artifacts
+
+The pipeline produces:
+
+- `raw_selected_documents.jsonl.zst`
+- `train_doc_ids.txt` and `validation_doc_ids.txt`
+- Offline token arrays and packed datasets in Arrow format
+- Online-tokenization input manifests containing the same ordered source documents
+- `dataset_manifest.json`
+- `checksums.sha256`
+
+The manifest schema and checksum coverage are defined in `DATA_CARD.md`. Content determinism is required; byte-identical Arrow serialization is not claimed across different dependency versions.
 
 # Phases
 
----
+## Phase 1 Finalize the Experimental Design
 
-## Phase 1: Finalize the experimental design
+Accept the frozen decisions in this document and create the dependency lockfile. Record any approved change in `DECISIONS.md`. Exit when the configuration validator can load one canonical experiment configuration without placeholders.
 
-The most important rule is:
+## Phase 2 Acquire and Organize FineWeb Edu
 
-> Change only one experimental variable at a time.
+Build the deterministic documents, splits, offline token arrays, packed datasets, manifests, and checksums described above. Exit when automated tests verify schema, split disjointness, nesting, exact counts, EOS boundaries, and checksum completeness.
 
-If you change the model, dataset, hardware, token budget, and training method simultaneously, you cannot determine which change caused the result.
+## Phase 3 Establish the Baseline
 
-### Basic Project Decisions
+Evaluate the unchanged model, run a smoke test, and execute baseline `P00` from the experiment matrix. The frozen baseline is:
 
-* One base pretrained model
-  01. Model options. Once selected, that model remains fixed. Comparing Qwen with Pythia would be a separate model-comparison project.
-     - Qwen2.5-0.5B for a modern, compact model
-     - Pythia-410M for the cleanest scientific research design
-     - OLMo-1B for the strongest transparency and reproducibility
+- Full-parameter training for the pipeline experiments
+- AdamW with beta1 0.9, beta2 0.95, epsilon `1e-8`, and weight decay 0.1
+- Bfloat16 model and computation
+- Microbatch of one 1,024-token sequence
+- Eight gradient-accumulation steps, for a normal effective batch of 8,192 tokens
+- Gradient norm clipping at 1.0
+- Peak learning rate `2e-5`
+- Linear warmup for 100 optimizer updates, followed by cosine decay to `2e-6`
+- One pass over the selected packed training subset; flush the final partial accumulation group
+- Checkpoints every 250 optimizer updates and at the end
+- Seed 42 for system benchmarks; seeds 17, 42, and 73 for reported quality runs
 
-  02. Base Pretrained Model
-     1. Qwen/Qwen2.5-0.5B
-     2. Serves as experimental vehicle b/c it's compact, 0.49 billion param causal lang model designed for post-training adaption
+Performance benchmarks use 50 untimed warmup optimizer updates followed by 300 measured optimizer updates and three independent process runs. Training-quality experiments consume their full stated token budget.
 
-* One exact model revision
-  01. Model weights will be pinned to a specific Git commit hash to guarantee reproducibility and prevent silent upstream updates
-* One FineWeb-Edu dataset snapshot
-  01. The sample/10BT subset of HuggingFaceFW/fineweb-edu
-  02. This will also be locked to a specific commit hash, such as 20b2c9f0d743a587e1be1cc836d0ea084fd662d4
-* A sequence length, initially 1, 024 tokens
-  01. Strictly locked at 1,024 tokens for all reported comparisons
-* Training subsets of 10M, 50M, and 100M tokens
-  01. Deterministic, nested partitions of 10M, 50M, and 100M tokens
-  02. The 10M slice validates the pipeline mechanics, while the larger slices test workload scaling
-* A 95% training and 5% validation split
-  01. A 95% training and 5% validation split executed strictly at the document level prior to tokenization
-  02. This prevents text chunks from the same webpage from leaking across partitions
-* The hardware used for each experiment
-  01. Apple MacBook Pro featuring an M5 Pro chip and 48 GB of unified memory
-  02. Final timed comparisons will run exclusively on this machine without combining metrics from secondary systems
-* The software and library versions
-  01. Explicitly locked versions for mlx, mlx-lm, mlx-tune, datasets, and lm-eval
+## Phase 4 Run the Data Pipeline Experiments
 
----
+Run the exact matrix in `EXPERIMENT_PROTOCOL.md`. Each pipeline experiment changes one factor while holding the model, seed, examples, sequence length, precision, training method, and hardware fixed. Remote streaming and cache observations are diagnostic and cannot win the stable local production-pipeline selection.
 
-## Phase 2: Acquire and organize FineWeb-Edu
+## Phase 5 Select the Production Pipeline
 
-FineWeb-Edu is far too large to use in full. You will stream documents from one official sample and create smaller experimental datasets.
+Among stable local candidates, select the configuration with the highest median real-token throughput across three runs, provided that:
 
-The workflow will be:
+- Its final validation loss after the 10M-token confirmation run is no more than 1% above the full-training control loss.
+- All three benchmark runs complete without data loss, NaN/Inf values, or memory failure.
+- Peak process memory remains below 43 GB, approximately 90% of installed unified memory.
 
-```text
-FineWeb-Edu sample
-        ↓
-Stream documents
-        ↓
-Remove empty or unusable records
-        ↓
-Split complete documents into training and validation sets
-        ↓
-Tokenize with the selected model’s tokenizer
-        ↓
-Build 10M, 50M, and 100M-token subsets
-```
+If median throughput differs by less than 2%, choose lower peak memory; if still tied, choose the simpler configuration in this order: offline over online, local over remote, fewer workers, and lower prefetch depth.
 
-### Document-level splitting
+## Phase 6 Compare Adaptation Methods
 
-Documents must be assigned to the training or validation partition before they are divided into smaller sequences.
+Use the selected production pipeline and the 10M-token subset.
 
-For example:
+### Full Parameter Training
 
-```text
-Document A → training only
-Document B → training only
-Document C → validation only
-```
+Train every parameter with the baseline optimizer and schedule.
 
-You should not place the first half of Document C in training and the second half in validation. That would allow the model to train on material closely related to its evaluation data. 
+### LoRA
 
-> This is because of a problem in ML known as data leakage, which occurs when you fail to separate your data by whole documents. 
-> 1. if cut single document like docC in half, placing first half in train set and second half in validation set, model learns highl specific context, vocab, and style of exact webpage during its training
-> 2. when you subsequently test model accuracy on second half of same webpage, it will score artificially high b/c the eval material is too closely related to what it just studied
-> 3. Splitting strictly at document level presents these text chunks from same webpage from leaking across partitions, ensuring validation test remains a true measure of model's performance on unseen data
+Freeze the base model, embeddings, normalization layers, and language-model head. Apply LoRA to all 24 transformer layers and these modules: `q_proj`, `k_proj`, `v_proj`, `o_proj`, `gate_proj`, `up_proj`, and `down_proj`.
 
-### Nested dataset subsets
+- Rank: 16
+- Alpha: 8, represented in MLX-LM as scale 0.5
+- Dropout: 0.05
+- Optimizer: AdamW with the baseline beta, epsilon, and clipping values; weight decay 0.0
+- Peak learning rate: `1e-4`
+- Warmup: 100 optimizer updates
+- Schedule: cosine decay to `1e-5`
 
-The subsets should be nested:
+### Optional QLoRA
 
-```text
-First 10M tokens ⊂ first 50M tokens ⊂ first 100M tokens
-```
+Use the same LoRA settings over a frozen 4-bit base model:
 
-This means the 50M-token set contains everything in the 10M-token set plus an additional 40M tokens. This makes dataset-size comparisons easier to interpret.
+- Quantization: MLX affine 4-bit weights
+- Group size: 64
+- Compute dtype: bfloat16
+- Adapter parameters: bfloat16
+- Quantization library: the locked MLX-LM release
 
-### Data products
+QLoRA is included only after a smoke test confirms finite loss, checkpoint reload, and deterministic evaluation. It is not required for core completion.
 
-This phase should produce:
+### Training Method Selection
 
-* Raw selected documents
-  + Stream documents from versioned FineWeb-Edu dataset snapshot and filter out any empty or unusable records before further processing
-    > To determine which documents in FineWeb-Edu are empty or unusable, inspect the raw fields as records stream in and filter them out using concrete heuristics before partitioning: 
-    > * **Empty Text Fields:** Records where the `"text"` field is `None` , contains an empty string ( `""` ), or consists entirely of whitespace characters (e.g., `row["text"].strip() == ""` ).
-    > * **Degenerate Document Lengths:** Documents that are too short to provide meaningful context or next-token prediction signals (e.g., records with fewer than 50–100 characters or fewer than 20–30 tokens), which often consist of fragmented headers, error messages, or copyright notices.
-    > * **Corrupted or Repetitive Text:** Scraped records containing repetitive character loops, excessive punctuation artifacts, or garbled encoding/unprintable characters resulting from extraction failures.
-    > * **Low Educational Quality / Classifier Scores:** FineWeb-Edu includes an educational quality score attribute in its metadata (e.g., `score` or `dump` ). You can filter out records below an explicit threshold if filtering out non-educational or low-signal web scrapes.
-    > * **Missing Identifiers / Core Metadata:** Records lacking essential tracking fields (like a missing or invalid source URL / document ID), which undermines your requirement to keep an exact, auditable document identifier list for reproducibility.
-    > * **Encoding Corruption:** Strings failing UTF-8 normalization or possessing high ratios of replacement glyphs (\ufffd) and unprintable control characters.
-    > * **Storage Artifact:** Surviving raw records are saved as clean, un-tokenized JSON Lines (raw_selected_documents.jsonl), preserving raw text strings alongside their original schema.
+Select the core method with the lowest mean validation loss across seeds 17, 42, and 73, subject to peak memory below 43 GB. If mean losses differ by at most 0.01, select the method with lower median peak memory; if still tied, select the faster method. QLoRA is reported separately unless it completes the identical Mac protocol.
 
-* Training and validation document lists
-  + Need to deterministically split complete, cleaned documents into non-overlapping partitions, assigning approx 95% of docs strictly to training list and 5% to validation list. 
-  + separation must happen at document level to prevent text from same webpage from leaking across partitions
-  + Standard sequence-chunking algorithms can split a single document across the train/validation boundary, allowing a model to memorize earlier paragraphs and artificially deflate validation perplexity.
-    > **Deterministic Assignment:** Splitting occurs *before* tokenization and sequence packaging. Each document's persistent ID (e.g., `id` or `url` hash) is passed through a deterministic hashing function: 
-    > $$\text{hash}(\text{doc\_id}) \pmod{100} < 95 \implies \text{Train}, \quad \text{otherwise} \implies \text{Validation}$$
-    > **Audit Manifests:** The pipeline writes out explicit document ID lists ( `train_doc_ids.txt` and `val_doc_ids.txt` ).
-    > **Non-Overlapping Verification:** An automated unit test confirms:
-    > $$\text{Train IDs} \cap \text{Validation IDs} = \emptyset$$
-    > This ensures that downstream 10M, 50M, and 100M subsets pull solely from the designated training document pool.
+## Phase 7 Test Dataset Scale
 
-* Pretokenized datasets
-  + Raw text from pretrained docs must be run through selected Qwen2.5 tokenizer offline to generate and save token IDs before any training begins
-  + Pretokenization isolates data preparation from accelerator execution
-    - if a gpu or unified-memory device tokenizes raw text on the fly during training, accelerator stalls on CPU-bound BPE encoding operations
-  > * **Offline Processing:** The cleaned documents in the train/val splits are encoded using `Qwen/Qwen2.5-0.5B` 's official byte-level BPE tokenizer ( `AutoTokenizer.from_pretrained(..., use_fast=True)` ).
-  > * **Zero-Copy Arrow Serialization:** Tokenized outputs ( `input_ids` ) are stored directly as Apache Arrow tables ( `.arrow` / `.feather` ).
-  > * **Memory-Mapping ( `mmap` ):** When loaded during training runs, the dataset uses zero-copy memory mapping. The operating system pages token IDs straight from storage into RAM without Python heap allocation overhead, maximizing I/O throughput.
+Use the Phase 6 winner with the fixed production pipeline at 10M, 50M, and 100M tokens. Each run consumes exactly one pass over its nested subset. Report quality improvement, runtime, and cost per additional quality gain.
 
-* Packed training sequences
-  + Instead of padding independent short examples, multiple tokenized documents must be concatenated together to fill 1, 024 token sequences
-  + Short docs leave significant portions of a fixed context window filled with padding tokens
-    - Model performs full matrix mults and attention calculations over these pad tokens, wasting compute and skewing throughput metrics
-  > * **Concatenation Scheme:** Pretokenized documents are streamed into a rolling token buffer. An explicit End-Of-Sequence token ( `<|im_end|>` or `tokenizer.eos_token_id` ) is inserted between adjacent documents: 
-  > $$\dots [\text{Doc A Tokens}] \to \langle\text{eos}\rangle \to [\text{Doc B Tokens}] \to \langle\text{eos}\rangle \dots$$
+## Phase 8 Evaluate Hardware
 
-  > * **Chunking to Fixed Context:** The contiguous stream is sliced into chunks of exactly 1, 024 tokens:
+The Mac is the only required hardware. If one NVIDIA system becomes available, repeat a complete, predefined comparison on that system using a separately pinned CUDA/PyTorch environment. Do not mix Mac and NVIDIA rows in a training-method effect estimate.
 
-    > $$\text{Sequence}_i = \text{Buffer}[i \times 1024 : (i + 1) \times 1024]$$
+If two identical NVIDIA GPUs become available, optionally compare one GPU with two-GPU DDP using the identical model, precision, global batch size per GPU policy, and measured-step window. Report scaling efficiency as two-GPU throughput divided by twice one-GPU throughput.
 
-  > * **Attention Mechanism:** Depending on whether cross-document contamination is evaluated, packed sequences are either trained with standard causal attention masks or paired with block-diagonal attention matrices (document boundaries reset attention so Document B does not attend to Document A).
+## Phase 9 Evaluate Model Quality
 
-* Dataset metadata
-  + As documents are streamed and selected, must retain their original source IDs and any other relevant metadata
-  + To guarantee auditability and forensic tracking, raw text is never decoupled from origin
-  > **Preserved Schema:** Every processed record maintains a structured schema alongside tokenized arrays:
-  > * `doc_id` : Unique document hash from FineWeb-Edu.
-  > * `url` : Primary web address for source verification.
-  > * `dump` : Common Crawl batch identifier.
-  > * `educational_score` : FineWeb-Edu's classifier rating.
-  > * `token_length` : Exact token count resulting from the Qwen tokenizer.
+Evaluate the unchanged model and every final checkpoint on the fixed 1,024,000-input-token validation set. Because each independently evaluated 1,024-token sequence contributes 1,023 shifted next-token targets, loss is averaged over exactly 1,023,000 scored target tokens. Perplexity is `exp(validation_loss)`.
 
-  > **Manifest Logs:** A central metadata file ( `dataset_manifest.json` ) records the total document count, character-to-token ratios, vocabulary distribution statistics, and date/time of extraction.
-* Token counts
-  + Must track exact number of tokens generated by tokenizer to carve out deterministic, nested experiemntal subsets of 10 million, 50 million, and 100 million tokens
-  > * **Deterministic Nested Subsets:** The dataset builder enforces strict mathematical nesting:       
-  > $$\mathcal{D}_{10\text{M}} \subset \mathcal{D}_{50\text{M}} \subset \mathcal{D}_{100\text{M}}$$
-  
-  > * 50M subset consists of the 10M subset plus 40M additional tokens, and the 100M subset consists of the 50M subset plus 50M additional tokens
-  >     * **Hard Cutoff Accounting:** The build script increments a cumulative counter on packed 1, 024-token vectors:
-  >     * **10M Subset:** $\lfloor 10{, }000{, }000 / 1{, }024 \rfloor = 9{, }765$ sequences ($9{, }999{, }360$ tokens).
-  >     * **50M Subset:** $\lfloor 50{, }000{, }000 / 1{, }024 \rfloor = 48{, }828$ sequences ($49{, }999{, }872$ tokens)
-  >     * **100M Subset:** $\lfloor 100{, }000{, }000 / 1{, }024 \rfloor = 97{, }656$ sequences ($99{, }999{, }744$ tokens).
-  >     * Sequence counts are fixed and recorded in configuration headers to ensure every system configuration evaluates the exact same workload.
+Use `lm-eval==0.4.13` for `arc_easy` and `openbookqa` with zero few-shot examples. Score answer choices by conditional log likelihood. Report `acc` and `acc_norm`, with `acc_norm` primary. Use seed 42, batch size 1, no generation sampling, and the exact task definitions shipped in the pinned package.
 
-* Scripts capable of rebuilding every dataset
-  + Entire data prep workflow must be written into version-controlled scripts so that dataset snapshots, document splits, and packed sequences can be programmatically reproduced for future experiements.
-  > * No step in the data pipeline is performed by manual one-off terminal executions or undocumented GUI clicks.
-  > * **CLI Parameterization:** The pipeline is implemented as executable scripts with deterministic CLI arguments:
+MLX checkpoints must be exported to Hugging Face-compatible weights for benchmark evaluation. Before evaluation, compare logits for three fixed test prompts between the MLX checkpoint and exported checkpoint; maximum absolute logit difference must be at most `1e-3`. Evaluation runtime is not a training-performance metric.
 
-    
+## Phase 10 Analyze and Report
 
-```bash
-    python -m src.data.build_pipeline \
-        --dataset-snapshot "20b2c9f0d743a587e1be1cc836d0ea084fd662d4" \
-        --tokenizer-name "Qwen/Qwen2.5-0.5B" \
-        --seq-len 1024 \
-        --train-ratio 0.95 \
-        --output-dir "./data/processed" \
-        --seed 42
-```
+Report distributions and individual replicates, not only the best run. Combine system performance with quality and state limitations. Required comparisons include pipeline versus throughput, method versus memory and quality, scale versus quality and runtime, and optional hardware scaling.
 
-  > * **Pipeline Checksums:** The scripts write out `sha256` checksums for all created Arrow tables and ID manifests.
-  > * **Reproducibility Guarantee:** Re-running the pipeline on a clean machine pulls the identical dataset snapshot and generates bit-for-bit identical Arrow arrays, ensuring any observed throughput differences stem strictly from hardware and engine optimizations.
+The final outputs are reproducible datasets, scripts, configurations, structured logs, checkpoints or adapters, evaluation results, plots, a cost analysis, and a recommendation for continued pretraining under limited compute.
 
----
-
-## Phase 3: Establish the baseline
-
-The baseline is the unoptimized configuration against which later changes will be measured.
-
-A possible baseline is:
-
-* Selected base model
-* 10M-token dataset
-* On-the-fly tokenization
-* Independent padded examples
-* Local dataset loading
-* One accelerator
-* Fixed 1,024-token maximum sequence length
-* Fixed effective batch size
-* No special caching optimization
-* One documented number of training steps
-
-First, evaluate the unchanged model before training. Record:
-
-* Validation loss
-* Validation perplexity
-* ARC Easy accuracy
-* OpenBookQA accuracy
-
-Then run the baseline training configuration and record:
-
-* Tokens processed per second
-* Time per training step
-* Total runtime
-* Peak memory
-* CPU utilization
-* Accelerator utilization
-* Time spent preparing each batch
-* Final validation perplexity
-
-This establishes the reference point. Every optimization will be compared with it.
-
----
-
-## Phase 4: Run the data-pipeline experiments
-
-These experiments determine how efficiently text moves from storage into the model.
-
-Use the 10M-token subset initially because the goal is to measure the system without paying for long training runs.
-
-Use the same:
-
-* Model
-* Hardware
-* Training examples
-* Sequence length
-* Number of measured steps
-* Effective batch size
-* Precision
-* Training method
-
-Each benchmark should have:
-
-01. A warm-up period
-02. A fixed measurement period
-03. At least three repeated runs
-04. Mean results and run-to-run variation
-
-### Experiment 1: On-the-fly versus offline tokenization
-
-#### Configuration A
-
-Tokenize each document while training:
+# Experiment Sequence
 
 ```text
-Raw text → tokenizer → sequence → model
+Freeze model, data, framework, and hardware
+        ↓
+Build and validate deterministic datasets
+        ↓
+Run an end-to-end smoke test
+        ↓
+Measure the fixed baseline
+        ↓
+Change one data-pipeline factor at a time
+        ↓
+Select and freeze the production pipeline
+        ↓
+Compare full training and LoRA, with QLoRA optional
+        ↓
+Run 10M, 50M, and 100M scale experiments
+        ↓
+Run fixed quality evaluation
+        ↓
+Analyze performance, quality, memory, and cost
 ```
 
-#### Configuration B
-
-Tokenize everything before training:
-
-```text
-Raw text → tokenizer → saved token IDs
-                              ↓
-                         model training
-```
-
-#### Research question
-
-Does offline tokenization prevent the model from waiting for the CPU?
-
-#### Measurements
-
-* Tokens per second
-* Batch-preparation time
-* CPU utilization
-* Accelerator idle time
-* Storage required for the tokenized dataset
-* One-time preprocessing cost
-
-Offline tokenization might make training faster, but you must report the time required to create the tokenized dataset.
-
----
-
-### Experiment 2: Padding versus sequence packing
-
-Documents and passages have different lengths.
-
-Without packing, a short example might look like:
-
-```text
-[real tokens][padding][padding][padding]
-```
-
-The model still spends resources processing much of that padding.
-
-With packing:
-
-```text
-[document A][separator][document B][separator][document C]
-```
-
-Multiple examples fill one fixed-length sequence.
-
-#### Research question
-
-Does sequence packing increase the percentage of useful tokens processed?
-
-#### Measurements
-
-* Real tokens per second
-* Percentage of padding tokens
-* Accelerator utilization
-* Training step time
-* Validation perplexity
-
-Quality must still be checked because documents need appropriate separators and attention handling.
-
----
-
-### Experiment 3: Local loading versus streaming
-
-#### Local loading
-
-Download the selected dataset before training and read it from local storage.
-
-#### Streaming
-
-Read records progressively without storing the entire source dataset locally.
-
-#### Research question
-
-When is streaming beneficial, and when does network or decoding latency cause the model to wait?
-
-#### Measurements
-
-* Tokens per second
-* Time to first batch
-* Storage use
-* CPU utilization
-* Accelerator idle time
-* Batch latency
-* Runtime variability
-
-Streaming may reduce storage requirements but produce less stable timing. Final benchmark runs should not depend on an unreliable network connection unless network performance is itself being studied.
-
----
-
-### Experiment 4: Cold cache versus warm cache
-
-A cold-cache run begins without previously cached dataset blocks. A warm-cache run repeats the experiment after frequently used data has been placed in memory or operating-system caches.
-
-#### Research question
-
-Are apparent performance improvements caused by the pipeline or merely by cached data?
-
-Report cold and warm measurements separately.
-
----
-
-### Experiment 5: DataLoader workers and prefetching
-
-Workers prepare upcoming batches while the accelerator processes the current batch.
-
-Test a small, bounded set such as:
-
-```text
-Workers: 0, 2, 4, 8
-Prefetch: supported low and high settings
-```
-
-Do not test every imaginable value.
-
-#### Research question
-
-How many workers keep the accelerator supplied without overwhelming the CPU or memory?
-
-#### Measurements
-
-* Tokens per second
-* CPU utilization
-* Memory use
-* Batch wait time
-* Accelerator utilization
-
-More workers are not automatically better. Excessive parallelism may increase memory pressure and process-management overhead.
-
----
-
-## Phase 5: Select the best data pipeline
-
-After Phase 4, construct one recommended pipeline.
-
-For example, the result might be:
-
-```text
-FineWeb-Edu documents
-        ↓
-Offline tokenization
-        ↓
-Arrow dataset stored locally
-        ↓
-Packed 1,024-token sequences
-        ↓
-Four DataLoader workers
-        ↓
-Prefetched batches
-        ↓
-Model training
-```
-
-This is only an example. Your measured results determine the actual configuration.
-
-The selected pipeline becomes fixed for the model-adaptation experiments. That prevents data-pipeline differences from distorting the comparison between full training, LoRA, and QLoRA.
-
----
-
-## Phase 6: Compare model-adaptation methods
-
-These experiments compare how much of the model is updated.
-
-All methods should receive:
-
-* The same training corpus
-* The same number of training tokens
-* The same sequence length
-* The same train-validation split
-* The optimized data pipeline
-* The same hardware
-* A comparable effective batch size
-* The same evaluation process
-
-Method-specific learning rates may differ, but they must be selected during a small pilot and then documented and fixed.
-
-### Configuration 0: Unchanged model
-
-This model receives no additional training.
-
-It provides the starting quality baseline.
-
-### Configuration 1: Full-parameter continued pretraining
-
-Every model parameter can change.
-
-```text
-Base model
-    ↓
-All parameters updated
-```
-
-#### Expected characteristics
-
-* Highest memory use
-* Large checkpoints
-* Potentially the greatest ability to adapt
-* More expensive optimizer state
-* Useful baseline for judging LoRA
-
-### Configuration 2: LoRA continued pretraining
-
-The original model weights remain frozen. Small trainable adapter matrices are added to selected layers.
-
-```text
-Frozen base model
-        +
-Trainable LoRA adapters
-```
-
-#### Expected characteristics
-
-* Lower memory requirements
-* Much smaller saved artifacts
-* Possibly different throughput
-* May approach full-training quality
-* Easier to run on constrained hardware
-
-### Configuration 3: QLoRA continued pretraining
-
-The frozen base model is stored in a quantized representation while LoRA adapters are trained.
-
-#### Expected characteristics
-
-* Lowest model-weight memory
-* May enable larger batches
-* Requires a compatible quantization stack
-* Most practical on supported NVIDIA hardware
-* Quantization operations may affect speed
-
-QLoRA should remain conditional. If the available environment cannot run it reliably, report that limitation rather than changing hardware midway through a comparison.
-
-### Model-adaptation measurements
-
-For every method, record:
-
-* Peak memory
-* Tokens per second
-* Total runtime
-* Final validation perplexity
-* Educational benchmark accuracy
-* Checkpoint or adapter size
-* Number of trainable parameters
-* Estimated cost
-
-A useful result might be:
-
-> LoRA used 45% less peak memory than full continued pretraining while finishing with validation perplexity within 3% of the full-training result.
-
----
-
-## Phase 7: Test dataset scale
-
-After identifying the best pipeline, test whether its advantages remain as the dataset grows.
-
-Use:
-
-* 10M tokens
-* 50M tokens
-* 100M tokens
-
-Do not repeat every earlier configuration at every dataset size. That would create too many experiments.
-
-Instead:
-
-01. Use the best pipeline.
-02. Select one principal training method, probably LoRA.
-03. Train on each nested subset.
-04. Keep the training procedure consistent.
-05. Measure efficiency and model quality.
-
-### Research questions
-
-* Does throughput remain stable as the corpus grows?
-* Does streaming become more useful at larger sizes?
-* How much does validation perplexity improve from 10M to 50M and from 50M to 100M tokens?
-* Does the additional quality justify the added runtime?
-
-This phase examines diminishing returns. The model may improve substantially from 10M to 50M tokens but only slightly from 50M to 100M.
-
----
-
-## Phase 8: Evaluate hardware
-
-Hardware comparisons must be separated from software comparisons.
-
-### MacBook experiments
-
-The Mac can be used for:
-
-* Pipeline development
-* Dataset preparation
-* Smoke tests
-* Short training runs
-* MPS-based benchmarks
-* Possibly complete small experiments
-
-Report:
-
-* Throughput
-* Runtime
-* Process memory
-* Unified-memory use where measurable
-* CPU and accelerator utilization where available
-
-### NVIDIA experiments
-
-If university or rented hardware is available, run the final comparison set on one consistent NVIDIA GPU.
-
-Report:
-
-* Throughput
-* Peak VRAM
-* GPU utilization
-* Runtime
-* Cost
-
-Do not compare a LoRA run on the Mac with a full-training run on NVIDIA and claim that the training method caused the difference. Both conditions must run on the same hardware.
-
-### Optional multi-GPU experiment
-
-If two identical NVIDIA GPUs are available:
-
-```text
-One GPU baseline
-        versus
-Two GPUs using DDP
-```
-
-Distributed Data Parallel places a copy of the model on each GPU and divides the batches between them. The GPUs synchronize gradients during training.
-
-Calculate:
-
-\[
-\text{Scaling efficiency}
-=
-\frac{\text{two-GPU throughput}}
-{2 \times \text{one-GPU throughput}}
-\]
-
-For example:
-
-```text
-One GPU: 1,000 tokens/second
-Two GPUs: 1,700 tokens/second
-Scaling efficiency: 1,700 / 2,000 = 85%
-```
-
-FSDP, tensor parallelism, and pipeline parallelism are outside the core project because a 0.5–1B parameter model should fit on one suitable accelerator.
-
----
-
-## Phase 9: Evaluate model quality
-
-A fast training configuration is not useful if it damages the model.
-
-### Validation loss
-
-Validation loss measures prediction error on FineWeb-Edu documents excluded from training. Lower is better.
-
-### Perplexity
-
-Perplexity is derived from validation loss and roughly measures how surprised the model is by unseen text. Lower is better.
-
-Compare:
-
-```text
-Unchanged model
-Full continued pretraining
-LoRA
-QLoRA
-```
-
-### Educational benchmarks
-
-Use a small fixed set such as:
-
-* ARC Easy
-* OpenBookQA
-
-Because these are base models, evaluate answer choices using model likelihood rather than relying entirely on conversational instruction-following.
-
-Use the same benchmark version and evaluation settings for every model checkpoint.
-
----
-
-## Phase 10: Analyze the results
-
-The final analysis should combine systems performance with model quality.
-
-Useful comparisons include:
-
-* Pipeline configuration versus tokens per second
-* Tokenization method versus CPU utilization
-* Packing method versus padding percentage
-* Training method versus peak memory
-* Training method versus validation perplexity
-* Corpus size versus validation perplexity
-* Corpus size versus runtime
-* GPU count versus throughput
-* Quality improvement versus estimated cost
-
-Avoid declaring a winner using only one metric.
-
-A configuration could be:
-
-* Fast but memory-intensive
-* Memory-efficient but slower
-* Fast but lower quality
-* Slightly slower but substantially higher quality
-
-The recommendation should account for the intended constraint.
-
----
-
-# How the experiment sequence fits together
-
-```text
-01. Select one base model
-        ↓
-02. Create reproducible FineWeb-Edu subsets
-        ↓
-03. Measure the unoptimized baseline
-        ↓
-04. Test data-pipeline changes individually
-        ↓
-05. Select the best pipeline
-        ↓
-06. Compare full training, LoRA, and QLoRA
-        ↓
-07. Test 10M, 50M, and 100M-token scales
-        ↓
-08. Run final hardware comparisons
-        ↓
-09. Evaluate perplexity and benchmark quality
-        ↓
-10. Produce recommendations and reproducibility materials
-```
-
-## Experimental summary
-
-| Experiment group | Variable changed | Variables held fixed | Main outcome |
-|---|---|---|---|
-| Tokenization | Online or offline | Model, data, hardware, steps | Throughput and CPU demand |
-| Sequence construction | Padding or packing | Model, tokens, hardware | Useful-token throughput |
-| Data access | Local, cached, or streamed | Model and training method | Input latency and storage tradeoff |
-| DataLoader | Workers and prefetch settings | Dataset and model | Best CPU-to-accelerator delivery |
-| Adaptation | Full, LoRA, or QLoRA | Data, hardware, token budget | Quality versus memory and runtime |
-| Dataset scale | 10M, 50M, or 100M tokens | Model and selected pipeline | Quality improvement versus cost |
-| Hardware | Mac, one NVIDIA GPU, optional two GPUs | Configuration within each comparison | Platform performance and scaling |
-
-## Final project outputs
-
-The completed project should produce:
-
-* Reproducible FineWeb-Edu subsets
-* Dataset-construction scripts
-* A baseline training configuration
-* An optimized data pipeline
-* Full-training, LoRA, and possibly QLoRA results
-* Training logs and structured metrics
-* Model-quality results
-* Performance graphs
-* Hardware and cost comparisons
-* A final recommendation for limited-compute continued pretraining
-
-The trained checkpoint is one output. The main research contribution is the evidence showing why one training configuration is more efficient than another.
+Implementation may begin with repository scaffolding and the smoke-test path. Official experiment collection may begin only after the readiness checklist in `EXPERIMENT_PROTOCOL.md` passes.
