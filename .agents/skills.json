@@ -1,8 +1,13 @@
 {
   "inherits": [
     {
-      "path": "~/.claude/skills",
+      "path": ".agents/skills",
       "include_only": [
+        "llm-flow-work-router",
+        "llm-flow-implementation-planner",
+        "llm-flow-implementation-executor",
+        "llm-flow-reviewer",
+        "llm-flow-researcher",
         "agent-introspection-debugging",
         "architecture-decision-records",
         "benchmark-optimization-loop",

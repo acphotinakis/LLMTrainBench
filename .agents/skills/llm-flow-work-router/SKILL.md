@@ -27,6 +27,8 @@ If current code conflicts with a frozen research contract, stop and report the m
 ## Workflow Skills
 
 - Planning only: `llm-flow-implementation-planner`.
+- Review a plan, implementation, or experiment evidence: `llm-flow-reviewer`.
+- Resolve a technical question or check a research claim: `llm-flow-researcher`.
 - Execute an approved plan: `llm-flow-implementation-executor`.
 - Overall ML architecture, data contracts, reproducibility, and evaluation: `mle-workflow`.
 

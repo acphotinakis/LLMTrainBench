@@ -1,6 +1,6 @@
 ---
 name: llm-flow-implementation-planner
-description: Create evidence-based implementation plans for a defined LLM Flow phase work item without changing product code. Use before implementing data, MLX training, benchmarking, evaluation, or project infrastructure work.
+description: Break remaining LLM Flow phase requirements into individual work items and create evidence-based implementation plans before implementation.
 metadata:
   project: llm-flow
   role: planning
@@ -19,6 +19,14 @@ Produce an implementation-ready plan grounded in current repository evidence. Th
 5. Resolve documentation contradictions explicitly. Record an assumption only when evidence cannot resolve the issue.
 6. Write the plan to `docs/work-items/phase-<NN>/plans/<work-item>-<slug>-plan.md` unless the user supplies another repository-local path.
 7. Re-read the saved plan and confirm every outcome and phase exit criterion is traceable to checklist items and validation commands.
+
+## Phase Breakdown
+
+When asked to plan a whole phase or the remaining project, inventory completed work first. Preserve existing IDs and completion evidence, including `P1-001`.
+
+Maintain `docs/work-items/INDEX.md` with one row per item: ID, phase, goal, dependencies, required or optional, status, and plan path. Use IDs such as `P2-001`. Give each item one independently verifiable outcome; separate code implementation from collecting official experiment results. Map every remaining phase requirement and exit criterion to an item. Mark Phase 8 and optional QLoRA work as optional.
+
+Create a plan for each requested item using the structure below. Commands for proposed modules must be labeled as available only after implementation; use existing repository tooling for immediate checks. Do not start implementation while creating the backlog.
 
 ## Required Plan Structure
 
