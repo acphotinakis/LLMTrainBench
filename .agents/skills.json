@@ -1,0 +1,25 @@
+{
+  "inherits": [
+    {
+      "path": "~/.claude/skills",
+      "include_only": [
+        "agent-introspection-debugging",
+        "architecture-decision-records",
+        "benchmark-optimization-loop",
+        "data-throughput-accelerator",
+        "deep-research",
+        "documentation-lookup",
+        "git-workflow",
+        "mle-workflow",
+        "python-patterns",
+        "python-testing",
+        "pytorch-patterns",
+        "research-ops",
+        "security-review",
+        "strategic-compact",
+        "tdd-workflow",
+        "verification-loop"
+      ]
+    }
+  ]
+}
