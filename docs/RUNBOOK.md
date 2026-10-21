@@ -5,12 +5,24 @@ This runbook defines the execution order. Command names are interface contracts 
 ## 1 Prepare the Environment
 
 ```bash
+uv lock --check
 uv sync --frozen
-python -m src.environment.capture --output results/environment/core-mac.json
 uv run python -m llm_flow.config validate configs/core.yaml
+uv run python -m llm_flow.experiment_config validate-all
+uv run python -m llm_flow.environment capture --register-core-mac
+uv run python -m llm_flow.environment validate --capture results/environment/<capture-id>.json
+uv run python -m llm_flow.environment validate --capture results/environment/<capture-id>.json --require-artifacts
 ```
 
-Stop if the lockfile, revisions, EOS ID, hardware identity, or free-space checks fail.
+The capture command prints its immutable path under `results/environment/`; use that path in both validation commands. The first capture creates `results/environment/core-mac-binding.json`, which binds subsequent captures to the same physical machine. The first validation checks observed host, installed packages, storage, power, and start thermal state. Full validation also requires locally loaded pinned model, tokenizer, and dataset revision evidence and tokenizer EOS. Missing artifacts remain `unverified` and block readiness. A failed capture or validation record is retained; take a new capture after correcting the condition.
+
+After each run, record the end thermal observation without changing the start capture:
+
+```bash
+uv run python -m llm_flow.environment observe-end --capture results/environment/<capture-id>.json
+```
+
+This writes a separate immutable `results/environment/end-<capture-id>-<suffix>.json` linked to the start capture. The Phase 1 capture records start state only.
 
 ## 2 Build and Verify Data
 
