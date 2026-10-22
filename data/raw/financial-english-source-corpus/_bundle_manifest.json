@@ -1,0 +1,176 @@
+{
+  "created_at": "2026-07-02T06:27:59.234041+00:00",
+  "source_root": "/Users/inertia/Desktop/cap/020/final_data",
+  "source_manifest": "/Users/inertia/Desktop/cap/020/final_data/manifest.json",
+  "output_dir": "/Users/inertia/Desktop/cap/020/final_data/data_presplit",
+  "split_contract": "none; pre-split source rows",
+  "excluded": [
+    "preference_pairs"
+  ],
+  "schema": [
+    {
+      "name": "source",
+      "type": "string"
+    },
+    {
+      "name": "source_tokens",
+      "type": "int32"
+    },
+    {
+      "name": "dataset",
+      "type": "string"
+    },
+    {
+      "name": "metadata_json",
+      "type": "string"
+    },
+    {
+      "name": "source_file",
+      "type": "string"
+    },
+    {
+      "name": "index",
+      "type": "int64"
+    }
+  ],
+  "source_files": 638,
+  "empty_source_files_skipped": [
+    "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_3__sic2=83.jsonl"
+  ],
+  "rows": 2299685,
+  "shard_rows_target": 100000,
+  "shards": [
+    {
+      "path": "train-00000-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 119609298
+    },
+    {
+      "path": "train-00001-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 118302616
+    },
+    {
+      "path": "train-00002-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 117599640
+    },
+    {
+      "path": "train-00003-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 115355567
+    },
+    {
+      "path": "train-00004-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 19034650
+    },
+    {
+      "path": "train-00005-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 15870661
+    },
+    {
+      "path": "train-00006-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 6880315
+    },
+    {
+      "path": "train-00007-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7625373
+    },
+    {
+      "path": "train-00008-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7525274
+    },
+    {
+      "path": "train-00009-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7295547
+    },
+    {
+      "path": "train-00010-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7531861
+    },
+    {
+      "path": "train-00011-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7447013
+    },
+    {
+      "path": "train-00012-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7142908
+    },
+    {
+      "path": "train-00013-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7626829
+    },
+    {
+      "path": "train-00014-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7217784
+    },
+    {
+      "path": "train-00015-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7371111
+    },
+    {
+      "path": "train-00016-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7046885
+    },
+    {
+      "path": "train-00017-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7325871
+    },
+    {
+      "path": "train-00018-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7253649
+    },
+    {
+      "path": "train-00019-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7112942
+    },
+    {
+      "path": "train-00020-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7267484
+    },
+    {
+      "path": "train-00021-of-00023.parquet",
+      "rows": 100000,
+      "bytes": 7266653
+    },
+    {
+      "path": "train-00022-of-00023.parquet",
+      "rows": 99685,
+      "bytes": 7303559
+    }
+  ],
+  "rows_by_dataset": {
+    "10k": 1612868,
+    "bloomberg_financial_news": 397699,
+    "earnings_call": 129827,
+    "finsen": 27520,
+    "fiqa": 31771,
+    "high_quality_english_sentences": 100000
+  },
+  "tokenizer_label": "qwen3.5",
+  "hf_repo_id": "alwaysgood/financial-english-source-corpus",
+  "source_tokens_column": "source_tokens",
+  "source_tokens_tokenizer": "/Users/inertia/Desktop/cap/016/models/TranslateQwen_v1/tokenizer.json",
+  "source_tokens_tokenizer_label": "qwen3.5",
+  "source_tokens_add_special_tokens": false,
+  "source_tokens": 317266595,
+  "min_source_tokens": 3,
+  "max_source_tokens": 16823
+}

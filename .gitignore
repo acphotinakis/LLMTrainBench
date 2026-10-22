@@ -222,3 +222,6 @@ __marimo__/
 uv.lock
 
 .vscode/
+
+
+src/archive
