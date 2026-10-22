@@ -229,3 +229,6 @@ src/archive
 a.txt
 
 data/
+!src/data/
+
+cache/
