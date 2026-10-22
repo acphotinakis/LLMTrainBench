@@ -232,3 +232,5 @@ data/
 !src/data/
 
 cache/
+
+logs/

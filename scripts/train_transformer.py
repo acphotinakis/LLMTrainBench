@@ -53,6 +53,45 @@ from src.tokenizer import DEFAULT_TOKENIZER, safe_decode, tokenizer_from_spec
 
 # --- Runtime Diagnostics Helpers ---
 
+class PhaseProfiler:
+    def __init__(self, device: str, enabled: bool = False) -> None:
+        self.device = device
+        self.enabled = enabled
+        self.times: dict[str, list[float]] = {}
+
+    def synchronize(self) -> None:
+        if self.device.startswith("mps"):
+            torch.mps.synchronize()
+        elif self.device.startswith("cuda"):
+            torch.cuda.synchronize(self.device)
+        else:
+            sync_step(self.device)
+
+    @contextlib.contextmanager
+    def measure(self, phase: str):
+        if not self.enabled:
+            yield
+            return
+        self.synchronize()
+        start = time.perf_counter()
+        try:
+            yield
+        finally:
+            self.synchronize()
+            self.times.setdefault(phase, []).append(time.perf_counter() - start)
+
+    def report(self) -> None:
+        if not self.enabled:
+            return
+        tqdm.write("[profile] Cumulative synchronized phase timings (includes warmup):")
+        tqdm.write(f"{'Phase':30s} {'Calls':>7s} {'Total (s)':>11s} {'Mean (ms)':>11s} {'Median (ms)':>12s}")
+        for phase, samples in self.times.items():
+            tqdm.write(
+                f"{phase:30s} {len(samples):7d} {sum(samples):11.3f} "
+                f"{1000 * np.mean(samples):11.3f} {1000 * np.median(samples):12.3f}"
+            )
+
+
 def bytes_to_gib(num_bytes: int) -> float:
     """Convert a byte count to gibibytes for human-readable memory reports."""
     return num_bytes / (1024 ** 3)
@@ -423,6 +462,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=None, help="Learning rate (decayed 10x for the last 20%% of steps).")
     parser.add_argument("--eval-every", type=int, default=None, help="Evaluate every N steps.")
     parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducible runs.")
+    parser.add_argument("--profile", action="store_true",
+                        help="Report synchronized phase timings at evaluations and training end. Adds timing overhead.")
     parser.add_argument("--threads", type=int, default=None,
                         help="CPU threads (default: one per physical core). Fewer can be faster on hybrid CPUs.")
     parser.add_argument("--sample", default=None,
@@ -551,6 +592,7 @@ def resolve_train_config(args: argparse.Namespace) -> dict[str, Any]:
 def main() -> None:
     args = parse_args()
     train_config = resolve_train_config(args)
+    profiler = PhaseProfiler(train_config['device'], args.profile)
     if args.seed is not None:
         torch.manual_seed(args.seed)
         np.random.seed(args.seed)
@@ -671,6 +713,7 @@ def main() -> None:
     last_eval_time = time.perf_counter()
     latest_train_loss = None
     latest_dev_loss = None
+    device_info_printed = False
 
     # Create a progress bar to monitor training progress.
     pbar = tqdm(range(start_step, train_config['t_train_steps']))
@@ -683,12 +726,18 @@ def main() -> None:
             optimizer.zero_grad(set_to_none=True)
             step_loss = 0.0
             for _ in range(grad_accum):
-                xb, yb = next(batch_iterator)
-                with autocast_ctx():
+                with profiler.measure("Batch loading and transfer"):
+                    xb, yb = next(batch_iterator)
+                if not device_info_printed:
+                    tqdm.write(f"Model: {next(model.parameters()).device}")
+                    tqdm.write(f"Inputs: {xb.device} Targets: {yb.device}")
+                    device_info_printed = True
+                with profiler.measure("Forward and loss"), autocast_ctx():
                     _, loss = model(xb, yb)
                     # Scale so the accumulated gradient equals the full-batch mean gradient.
                     loss = loss / grad_accum
-                scaler.scale(loss).backward()
+                with profiler.measure("Backward"):
+                    scaler.scale(loss).backward()
                 step_loss += float(loss.item())
 
             # Record the (accumulated) loss for tracking.
@@ -696,12 +745,14 @@ def main() -> None:
             pbar.set_description(f"Train loss: {np.mean(losses[-avg_window:]):.4f}")
 
             # Clip gradients to prevent exploding gradients (unscale first for fp16 AMP).
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            with profiler.measure("Gradient clipping"):
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
-            scaler.step(optimizer)
-            scaler.update()
-            sync_step(train_config['device'])  # runs the queued graph on TPUs, a no-op elsewhere
+            with profiler.measure("Optimizer update"):
+                scaler.step(optimizer)
+                scaler.update()
+                sync_step(train_config['device'])  # runs the queued graph on TPUs, a no-op elsewhere
             last_completed_step = step
 
             # Measure step time and instantaneous throughput for diagnostics.
@@ -710,7 +761,8 @@ def main() -> None:
 
             # Periodically evaluate the model on training and development data.
             if step % train_config['t_eval_steps'] == 0:
-                evaluation_losses = estimate_loss(model, train_config, train_config['t_eval_iters'])
+                with profiler.measure("Evaluation"):
+                    evaluation_losses = estimate_loss(model, train_config, train_config['t_eval_iters'])
                 latest_train_loss = evaluation_losses['train']
                 latest_dev_loss = evaluation_losses['dev']
                 # Report timing/throughput for the most recent step and wall-time since last eval.
@@ -723,6 +775,7 @@ def main() -> None:
                     f"Elapsed since last eval: {elapsed_since_eval:.2f}s"
                 )
                 print(get_peak_memory_report(train_config['device']))
+                profiler.report()
 
             # Decay the learning rate at the specified step.
             if step == train_config['t_lr_decay_step']:
@@ -751,7 +804,9 @@ def main() -> None:
     # --- Save Model and Final Evaluation ---
 
     # Perform a final evaluation of the model on training and development datasets.
-    evaluation_losses = estimate_loss(model, train_config, 200)
+    with profiler.measure("Evaluation"):
+        evaluation_losses = estimate_loss(model, train_config, 200)
+    profiler.report()
     train_loss = evaluation_losses['train']
     dev_loss = evaluation_losses['dev']
 

@@ -51,7 +51,10 @@ def get_batch_iterator(data_path: str, batch_size: int, context_length: int, dev
             random_indices = example_idxs[counter:counter+batch_size] * context_length
 
             # Retrieve sequences from the dataset based on the random indices
-            random_samples = torch.tensor(np.array([dataset[idx:idx+context_length+1] for idx in random_indices]))
+            random_samples = torch.tensor(
+                np.array([dataset[idx:idx+context_length+1] for idx in random_indices]),
+                dtype=torch.long,
+            )
 
             # Separate the input sequences (xb) and target sequences (yb)
             xb = random_samples[:, :context_length].to(device)  # Input sequence (first half of the random sample)
