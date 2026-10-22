@@ -227,3 +227,5 @@ uv.lock
 src/archive
 
 a.txt
+
+data/
