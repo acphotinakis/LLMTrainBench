@@ -5,6 +5,61 @@ import numpy as np
 import torch
 
 
+class CorpusEpochLoader:
+    """Shard a deterministic epoch, repeating only enough windows to fill its last update.
+
+    The final window overlaps its predecessor to include every next-token target.
+    Corpora shorter than a context are edge-padded. All ranks use the same seed.
+    """
+
+    def __init__(self, data_path: str, batch_size: int, context_length: int,
+                 device: str = "cpu", *, rank: int = 0, world_size: int = 1,
+                 grad_accum: int = 1, seed: int = 1337):
+        if min(batch_size, context_length, world_size, grad_accum) <= 0:
+            raise ValueError("Batch, context, world size and accumulation must be positive")
+        if not 0 <= rank < world_size:
+            raise ValueError("Rank must be within world size")
+        self.data_path = data_path
+        self.batch_size = batch_size
+        self.context_length = context_length
+        self.device = device
+        self.rank = rank
+        self.world_size = world_size
+        self.grad_accum = grad_accum
+        self.seed = seed
+        with h5py.File(data_path, "r") as handle:
+            self.token_count = len(handle["tokens"])
+        if self.token_count < 2:
+            raise ValueError("Training corpus needs at least two tokens")
+        self.window_count = (self.token_count - 2) // context_length + 1
+        update_size = batch_size * world_size * grad_accum
+        self.steps_per_epoch = (self.window_count + update_size - 1) // update_size
+        self.padded_window_count = self.steps_per_epoch * update_size
+
+    def batches(self, epoch: int, start_batch: int = 0) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
+        """Yield rank-local batches, optionally seeking past completed microbatches."""
+        batch_count = self.steps_per_epoch * self.grad_accum
+        if epoch < 0 or not 0 <= start_batch <= batch_count:
+            raise ValueError("Invalid epoch or batch cursor")
+        order = np.random.default_rng(self.seed + epoch).permutation(self.window_count)
+        order = np.resize(order, self.padded_window_count)
+        local_order = order[self.rank::self.world_size]
+        with h5py.File(self.data_path, "r") as handle:
+            dataset = handle["tokens"]
+            for batch_index in range(start_batch, batch_count):
+                indices = local_order[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
+                samples = []
+                for window_index in indices:
+                    start = min(int(window_index) * self.context_length,
+                                max(0, self.token_count - self.context_length - 1))
+                    sample = np.asarray(dataset[start:start + self.context_length + 1])
+                    if len(sample) < self.context_length + 1:
+                        sample = np.pad(sample, (0, self.context_length + 1 - len(sample)), mode="edge")
+                    samples.append(sample)
+                batch = torch.tensor(np.asarray(samples), dtype=torch.long, device=self.device)
+                yield batch[:, :-1], batch[:, 1:]
+
+
 def get_batch_iterator(data_path: str, batch_size: int, context_length: int, device: str = "cpu") -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
     """
     Creates an iterator for generating batches of data from an HDF5 file.

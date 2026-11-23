@@ -4,6 +4,7 @@
   "batch_size": 8,
   "grad_accum": 12,
   "train_steps": 50000,
+  "epochs": 1,
   "eval_steps": 1000,
   "eval_iters": 100,
   "warmup_steps": 2000,

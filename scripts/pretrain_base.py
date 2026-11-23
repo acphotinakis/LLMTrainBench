@@ -33,7 +33,7 @@ from dataclasses import asdict
 import torch
 
 from config.post_training_config import PretrainConfig
-from data_loader.data_loader import get_batch_iterator
+from data_loader.data_loader import CorpusEpochLoader, get_batch_iterator
 from src.checkpoint import load_checkpoint, model_state_from_checkpoint
 from src.optim import build_optimizer, lr_at, set_lr
 from src.post_training.cli import parse_config_with_json
@@ -73,14 +73,29 @@ def main():
         extra={"--resume": dict(type=str, default=None, help="checkpoint to resume from")})
     resume = extras.resume
     ctx = ddp_setup(cfg.device)
+    loader = CorpusEpochLoader(
+        cfg.train_path, cfg.batch_size, cfg.context_length, ctx.device,
+        rank=ctx.rank, world_size=ctx.world_size, grad_accum=cfg.grad_accum, seed=cfg.seed)
+    if cfg.epochs is not None:
+        cfg.train_steps = loader.steps_per_epoch * cfg.epochs
+    if cfg.warmup_steps >= cfg.train_steps:
+        raise ValueError("warmup_steps must be smaller than the resolved training budget")
+    data_contract = dict(
+        version=1, train_path=os.path.abspath(cfg.train_path), token_count=loader.token_count,
+        batch_size=cfg.batch_size, context_length=cfg.context_length,
+        grad_accum=cfg.grad_accum, world_size=ctx.world_size, seed=cfg.seed)
     # Different data shuffle per rank (the loader shuffles via numpy global RNG).
     set_seed(cfg.seed + ctx.rank)
 
     model = build_model_from_config(cfg).to(ctx.device)
     start_step = 0
     ck = None
-    if resume and os.path.exists(resume):
+    if resume and not os.path.exists(resume):
+        raise FileNotFoundError(resume)
+    if resume:
         ck = load_checkpoint(resume, map_location="cpu")
+        if ck.get("data_contract") != data_contract:
+            raise ValueError("Resume requires a checkpoint from the sharded loader with the same corpus and batch layout")
         # Strip DDP / torch.compile prefixes so checkpoints from older runs load too (issue #36).
         model.load_state_dict(model_state_from_checkpoint(ck))
         # The saved step already finished its optimizer update, so continue with the next one.
@@ -104,15 +119,24 @@ def main():
               f"optimizer={cfg.optimizer} | schedule={cfg.lr_schedule} | world_size={ctx.world_size}")
         print(f"Effective batch = {cfg.batch_size}*{cfg.grad_accum}*{ctx.world_size} "
               f"= {cfg.batch_size*cfg.grad_accum*ctx.world_size} seqs/step")
+        print(f"Corpus: {loader.token_count:,} tokens | {loader.window_count:,} windows | "
+              f"{loader.steps_per_epoch:,} steps/epoch | budget={cfg.train_steps:,} steps "
+              f"({cfg.epochs if cfg.epochs is not None else 'step-limited'} epochs) | "
+              f"{loader.padded_window_count - loader.window_count} repeated padding windows/epoch")
         logger = MetricsLogger("pretrain", cfg.log_dir, use_wandb=cfg.use_wandb,
                                wandb_project=cfg.wandb_project, config=asdict(cfg))
 
-    batch_iter = get_batch_iterator(cfg.train_path, cfg.batch_size, cfg.context_length, device=ctx.device)
     tokens_per_step = cfg.batch_size * cfg.context_length * cfg.grad_accum * ctx.world_size
 
     model.train()
+    accum_loss = 0.0
+    last_completed_step = start_step - 1
+    batch_iter = None
     t0 = time.perf_counter()
     for step in range(start_step, cfg.train_steps):
+        epoch, epoch_step = divmod(step, loader.steps_per_epoch)
+        if batch_iter is None or epoch_step == 0:
+            batch_iter = loader.batches(epoch, start_batch=epoch_step * cfg.grad_accum)
         lr = lr_at(cfg.lr_schedule, step, warmup_steps=cfg.warmup_steps, max_steps=cfg.train_steps,
                    lr=cfg.lr, min_lr=cfg.min_lr)
         set_lr(optimizer, lr)
@@ -132,6 +156,9 @@ def main():
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
         optimizer.step()
+        last_completed_step = step
+        if ctx.is_main and (step + 1) % loader.steps_per_epoch == 0:
+            print(f"Completed corpus epoch {epoch + 1}: all {loader.window_count:,} windows covered")
 
         if ctx.is_main and step % 20 == 0:
             dt = time.perf_counter() - t0
@@ -151,12 +178,14 @@ def main():
 
         if ctx.is_main and step > start_step and step % cfg.save_every == 0:
             save_stage_ckpt(cfg.out_ckpt, model, optimizer, stage="pretrain",
-                            cfg=cfg, step=step, metrics={"train_loss": accum_loss})
+                            cfg=cfg, step=step, metrics={"train_loss": accum_loss},
+                            extra={"data_contract": data_contract})
             print(f"  saved checkpoint -> {cfg.out_ckpt} (step {step})")
 
     if ctx.is_main:
         save_stage_ckpt(cfg.out_ckpt, model, optimizer, stage="pretrain", cfg=cfg,
-                        step=cfg.train_steps, metrics={"train_loss": accum_loss})
+                        step=last_completed_step, metrics={"train_loss": accum_loss},
+                        extra={"data_contract": data_contract})
         print(f"Done. Final checkpoint -> {cfg.out_ckpt}")
         if logger:
             logger.close()

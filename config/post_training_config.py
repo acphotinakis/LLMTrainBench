@@ -99,6 +99,7 @@ class PretrainConfig(BaseModelConfig):
     batch_size: int = 24                # per-GPU micro-batch
     grad_accum: int = 8                 # effective batch = batch_size * grad_accum * world
     train_steps: int = 200_000
+    epochs: int | None = None
     eval_steps: int = 1_000
     eval_iters: int = 100
     warmup_steps: int = 2_000
@@ -114,8 +115,11 @@ class PretrainConfig(BaseModelConfig):
     def __post_init__(self) -> None:
         super().__post_init__()
         _check(self.batch_size > 0 and self.grad_accum > 0, "batch_size and grad_accum must be positive")
+        _check(self.epochs is None or self.epochs > 0, "epochs must be positive")
         _check(0 <= self.min_lr <= self.lr, "need 0 <= min_lr <= lr")
-        _check(self.warmup_steps < self.train_steps, "warmup_steps must be smaller than train_steps")
+        _check(self.warmup_steps >= 0, "warmup_steps must be nonnegative")
+        if self.epochs is None:
+            _check(self.warmup_steps < self.train_steps, "warmup_steps must be smaller than train_steps")
 
 
 @dataclass
