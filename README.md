@@ -124,7 +124,7 @@ Modules and configurations are present for supervised fine-tuning, reward modeli
 
 The Streamlit interface in `ui/` is under development. Its stage definitions reference several missing trainer scripts, and its pretraining data commands include an unsupported `--out` argument. Some tutorial pages also reference older datasets, installation extras, and entry points; check those commands against the current scripts.
 
-Existing GSM8K utilities support reasoning evaluation. Shared financial-domain evaluation tasks for the scratch-trained and adapted open-source models remain to be defined and run. No final model-quality comparison is claimed yet.
+Existing GSM8K utilities support reasoning evaluation. The shared financial evaluation notebook compares saved Qwen, SmolLM2, and Pythia base/adapter pairs on frozen prose and extraction tasks. Broader financial reasoning tasks and scratch-model integration remain future work. No final model-quality comparison is claimed yet.
 
 ## Repository layout
 
@@ -147,6 +147,7 @@ logs/               Runtime logs
 
 ## Documentation
 
+- [Shared financial evaluation](docs/FINANCIAL_EVALUATION.md): Colab harness comparison of saved base models and adapters
 - [Sprint 2 recap](docs/SPRINT_2_RECAP.md): implementation progress and comparison plans
 - [Foundations](docs/foundations/README.md): tokenization, transformers, attention, and optimization
 - [Modern architecture](docs/modern/README.md): RoPE, RMSNorm, GQA, and related components
