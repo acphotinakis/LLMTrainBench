@@ -1,0 +1,17 @@
+[
+  {
+    "model": "qwen",
+    "qa_accuracy_change": 0.4,
+    "bits_per_byte_change": -0.05468622128651557
+  },
+  {
+    "model": "smollm2",
+    "qa_accuracy_change": 0.0,
+    "bits_per_byte_change": -0.08825933627588234
+  },
+  {
+    "model": "pythia",
+    "qa_accuracy_change": -0.15,
+    "bits_per_byte_change": -0.11096524513477424
+  }
+]

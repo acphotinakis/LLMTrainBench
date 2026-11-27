@@ -1,0 +1,1754 @@
+{
+  "results": {
+    "financial_prose": {
+      "alias": "financial_prose",
+      "bits_per_byte,none": 1.119164080829925,
+      "bits_per_byte_stderr,none": "N/A"
+    },
+    "financial_qa": {
+      "alias": "financial_qa",
+      "acc,none": 0.15,
+      "acc_stderr,none": 0.08191780219091253
+    }
+  },
+  "group_subtasks": {
+    "financial_qa": [],
+    "financial_prose": []
+  },
+  "configs": {
+    "financial_prose": {
+      "task": "financial_prose",
+      "dataset_path": "json",
+      "dataset_kwargs": {
+        "data_files": {
+          "test": "/content/drive/MyDrive/llm_flow_evaluation/suites/financial_pilot_v1/financial_text.jsonl"
+        }
+      },
+      "test_split": "test",
+      "doc_to_text": "",
+      "doc_to_target": "{{text}}",
+      "unsafe_code": false,
+      "process_results": "def rolling_results(doc, results):\n    return {\"bits_per_byte\": (float(results[0]), len(doc[\"text\"].encode(\"utf-8\")))}\n",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "bits_per_byte",
+          "aggregation": "def aggregate_bpb(items):\n    return -sum(ll for ll, _ in items) / (sum(count for _, count in items) * math.log(2))\n",
+          "higher_is_better": false
+        }
+      ],
+      "output_type": "loglikelihood_rolling",
+      "repeats": 1,
+      "should_decontaminate": false
+    },
+    "financial_qa": {
+      "task": "financial_qa",
+      "dataset_path": "json",
+      "dataset_kwargs": {
+        "data_files": {
+          "test": "/content/drive/MyDrive/llm_flow_evaluation/suites/financial_pilot_v1/financial_qa.jsonl"
+        }
+      },
+      "test_split": "test",
+      "doc_to_text": "def qa_prompt(doc):\n    return f\"Passage:\\n{doc['context']}\\n\\nQuestion: {doc['question']}\\nAnswer:\"\n",
+      "doc_to_target": "        output_type=\"generate_until\", doc_to_text=qa_prompt, doc_to_target=lambda d: d[\"answers\"][0],\n",
+      "unsafe_code": false,
+      "process_results": "def qa_results(doc, results):\n    return {\"acc\": score_answer(results[0], doc[\"answers\"])}\n",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "generate_until",
+      "generation_kwargs": {
+        "do_sample": false,
+        "max_gen_toks": 48,
+        "until": [
+          "\n"
+        ]
+      },
+      "repeats": 1,
+      "should_decontaminate": false
+    }
+  },
+  "versions": {
+    "financial_prose": "Yaml",
+    "financial_qa": "Yaml"
+  },
+  "n-shot": {
+    "financial_prose": 0,
+    "financial_qa": 0
+  },
+  "higher_is_better": {
+    "financial_prose": {
+      "bits_per_byte": false
+    },
+    "financial_qa": {
+      "acc": true
+    }
+  },
+  "n-samples": {
+    "financial_prose": {
+      "original": 20,
+      "effective": 20
+    },
+    "financial_qa": {
+      "original": 20,
+      "effective": 20
+    }
+  },
+  "samples": {
+    "financial_prose": [
+      {
+        "doc_id": 0,
+        "doc": {
+          "id": "financial_0000",
+          "text": "Total payables to Harris were $17.9 million and $20.1 million at June 29, 2007 and June 30, 2006.",
+          "document_sha256": "9ad0ec6756d0cdec495c9ca8cdd28a9ed143dd1289b6a7a1a97cf4fb4b9c81c5",
+          "capped_document": "Total payables to Harris were $17.9 million and $20.1 million at June 29, 2007 and June 30, 2006.",
+          "passage_sha256": "9ad0ec6756d0cdec495c9ca8cdd28a9ed143dd1289b6a7a1a97cf4fb4b9c81c5",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "6171"
+        },
+        "target": "Total payables to Harris were $17.9 million and $20.1 million at June 29, 2007 and June 30, 2006.",
+        "arguments": [
+          [
+            "Total payables to Harris were $17.9 million and $20.1 million at June 29, 2007 and June 30, 2006."
+          ]
+        ],
+        "resps": [
+          [
+            -94.0
+          ]
+        ],
+        "filtered_resps": [
+          -94.0
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "29aae1fde7e5c2852b59b2f7a8f502f1fb7b3d9e70e44b7c13587fca3792d013",
+        "prompt_hash": "9ad0ec6756d0cdec495c9ca8cdd28a9ed143dd1289b6a7a1a97cf4fb4b9c81c5",
+        "target_hash": "9ad0ec6756d0cdec495c9ca8cdd28a9ed143dd1289b6a7a1a97cf4fb4b9c81c5",
+        "bits_per_byte": [
+          -94.0,
+          97
+        ]
+      },
+      {
+        "doc_id": 1,
+        "doc": {
+          "id": "financial_0001",
+          "text": "In 2006, we also borrowed $0.8 million for working capital needs in Ireland and China.",
+          "document_sha256": "fd947916228a2cc9e1f1218f69d82de3db6bb113eda4cb952593b10adcee2a7c",
+          "capped_document": "In 2006, we also borrowed $0.8 million for working capital needs in Ireland and China.",
+          "passage_sha256": "fd947916228a2cc9e1f1218f69d82de3db6bb113eda4cb952593b10adcee2a7c",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "6067"
+        },
+        "target": "In 2006, we also borrowed $0.8 million for working capital needs in Ireland and China.",
+        "arguments": [
+          [
+            "In 2006, we also borrowed $0.8 million for working capital needs in Ireland and China."
+          ]
+        ],
+        "resps": [
+          [
+            -83.375
+          ]
+        ],
+        "filtered_resps": [
+          -83.375
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "d3202a05db8610e1cf1c8f56b985ebd887b5c9e8b28e1d9aa8c233886912c0a0",
+        "prompt_hash": "fd947916228a2cc9e1f1218f69d82de3db6bb113eda4cb952593b10adcee2a7c",
+        "target_hash": "fd947916228a2cc9e1f1218f69d82de3db6bb113eda4cb952593b10adcee2a7c",
+        "bits_per_byte": [
+          -83.375,
+          86
+        ]
+      },
+      {
+        "doc_id": 2,
+        "doc": {
+          "id": "financial_0002",
+          "text": "Revenues from the sale of DBS products of the Pre-existing Products Division declined by $15,376,000, or 9%, while sales of other wireless products and services increased by $4,516,000 year-over-year.",
+          "document_sha256": "ab4cf6549970ae8e2774f6bce17706570d25547632e7d3b342933c79fac504cd",
+          "capped_document": "Revenues from the sale of DBS products of the Pre-existing Products Division declined by $15,376,000, or 9%, while sales of other wireless products and services increased by $4,516,000 year-over-year.",
+          "passage_sha256": "ab4cf6549970ae8e2774f6bce17706570d25547632e7d3b342933c79fac504cd",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "6158"
+        },
+        "target": "Revenues from the sale of DBS products of the Pre-existing Products Division declined by $15,376,000, or 9%, while sales of other wireless products and services increased by $4,516,000 year-over-year.",
+        "arguments": [
+          [
+            "Revenues from the sale of DBS products of the Pre-existing Products Division declined by $15,376,000, or 9%, while sales of other wireless products and services increased by $4,516,000 year-over-year."
+          ]
+        ],
+        "resps": [
+          [
+            -156.25
+          ]
+        ],
+        "filtered_resps": [
+          -156.25
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "41a537b1d98b50a7310c066417949da36808260a5e6bf66cf69fd86e25de4c22",
+        "prompt_hash": "ab4cf6549970ae8e2774f6bce17706570d25547632e7d3b342933c79fac504cd",
+        "target_hash": "ab4cf6549970ae8e2774f6bce17706570d25547632e7d3b342933c79fac504cd",
+        "bits_per_byte": [
+          -156.25,
+          200
+        ]
+      },
+      {
+        "doc_id": 3,
+        "doc": {
+          "id": "financial_0003",
+          "text": "The increase was primarily due to (i) $1.0 million higher commission and bonus accrual based on improved company performance, (ii) $346,000 higher accounting fees for the integrated audit including the SOX audit for 2010, which was not required for 2009, (iii) $283,000 higher legal fees incurred in fourth quarter of 2010 to conclude the royalty negotiation with Sumitomo, partially offset by (iv) $567,000 lower legal fees as certain legal fees incurred in 2009 did not recur in 2010, and (v) $376,000 lower severance cost.",
+          "document_sha256": "d7ad5f264f43be4bf7014b454bab7469679fd6b95dec07c22de4a78dc0e0b961",
+          "capped_document": "The increase was primarily due to (i) $1.0 million higher commission and bonus accrual based on improved company performance, (ii) $346,000 higher accounting fees for the integrated audit including the SOX audit for 2010, which was not required for 2009, (iii) $283,000 higher legal fees incurred in fourth quarter of 2010 to conclude the royalty negotiation with Sumitomo, partially offset by (iv) $567,000 lower legal fees as certain legal fees incurred in 2009 did not recur in 2010, and (v) $376,000 lower severance cost.",
+          "passage_sha256": "d7ad5f264f43be4bf7014b454bab7469679fd6b95dec07c22de4a78dc0e0b961",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "10567"
+        },
+        "target": "The increase was primarily due to (i) $1.0 million higher commission and bonus accrual based on improved company performance, (ii) $346,000 higher accounting fees for the integrated audit including the SOX audit for 2010, which was not required for 2009, (iii) $283,000 higher legal fees incurred in fourth quarter of 2010 to conclude the royalty negotiation with Sumitomo, partially offset by (iv) $567,000 lower legal fees as certain legal fees incurred in 2009 did not recur in 2010, and (v) $376,000 lower severance cost.",
+        "arguments": [
+          [
+            "The increase was primarily due to (i) $1.0 million higher commission and bonus accrual based on improved company performance, (ii) $346,000 higher accounting fees for the integrated audit including the SOX audit for 2010, which was not required for 2009, (iii) $283,000 higher legal fees incurred in fourth quarter of 2010 to conclude the royalty negotiation with Sumitomo, partially offset by (iv) $567,000 lower legal fees as certain legal fees incurred in 2009 did not recur in 2010, and (v) $376,000 lower severance cost."
+          ]
+        ],
+        "resps": [
+          [
+            -385.5
+          ]
+        ],
+        "filtered_resps": [
+          -385.5
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "ef0bfd535ad9622dccc0cc3df0e11764d7f292a4b7212dd83780cc3be0c0d34c",
+        "prompt_hash": "d7ad5f264f43be4bf7014b454bab7469679fd6b95dec07c22de4a78dc0e0b961",
+        "target_hash": "d7ad5f264f43be4bf7014b454bab7469679fd6b95dec07c22de4a78dc0e0b961",
+        "bits_per_byte": [
+          -385.5,
+          525
+        ]
+      },
+      {
+        "doc_id": 4,
+        "doc": {
+          "id": "financial_0004",
+          "text": "The adjustments of $9 million reflect: (i) $8 million of reversals of accruals no longer needed, and (ii) $1 million of translation adjustments.",
+          "document_sha256": "e0145a5ee5df7148a776840de40438bfeadeff18a1a3de71f775c5063b506641",
+          "capped_document": "The adjustments of $9 million reflect: (i) $8 million of reversals of accruals no longer needed, and (ii) $1 million of translation adjustments.",
+          "passage_sha256": "e0145a5ee5df7148a776840de40438bfeadeff18a1a3de71f775c5063b506641",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "8550"
+        },
+        "target": "The adjustments of $9 million reflect: (i) $8 million of reversals of accruals no longer needed, and (ii) $1 million of translation adjustments.",
+        "arguments": [
+          [
+            "The adjustments of $9 million reflect: (i) $8 million of reversals of accruals no longer needed, and (ii) $1 million of translation adjustments."
+          ]
+        ],
+        "resps": [
+          [
+            -128.5
+          ]
+        ],
+        "filtered_resps": [
+          -128.5
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "1b970544bc22a23b3d7861ff59a88797ddd1608adfce511a49cd4242953dd081",
+        "prompt_hash": "e0145a5ee5df7148a776840de40438bfeadeff18a1a3de71f775c5063b506641",
+        "target_hash": "e0145a5ee5df7148a776840de40438bfeadeff18a1a3de71f775c5063b506641",
+        "bits_per_byte": [
+          -128.5,
+          144
+        ]
+      },
+      {
+        "doc_id": 5,
+        "doc": {
+          "id": "financial_0005",
+          "text": "Koobe Inc. shipped a small number of eReaders to the Chinese market at the end of December 2010 and we recognized approximately $3,000 in revenue from these sales.",
+          "document_sha256": "4d4dd63973769b31d97e306d8c03953da45855d29eb21078c0658eb03d5a4f06",
+          "capped_document": "Koobe Inc. shipped a small number of eReaders to the Chinese market at the end of December 2010 and we recognized approximately $3,000 in revenue from these sales.",
+          "passage_sha256": "4d4dd63973769b31d97e306d8c03953da45855d29eb21078c0658eb03d5a4f06",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "9577"
+        },
+        "target": "Koobe Inc. shipped a small number of eReaders to the Chinese market at the end of December 2010 and we recognized approximately $3,000 in revenue from these sales.",
+        "arguments": [
+          [
+            "Koobe Inc. shipped a small number of eReaders to the Chinese market at the end of December 2010 and we recognized approximately $3,000 in revenue from these sales."
+          ]
+        ],
+        "resps": [
+          [
+            -128.625
+          ]
+        ],
+        "filtered_resps": [
+          -128.625
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "e54eeb647da720484a025919944539d7ebf9e84d78e364e2a038b8db0e280232",
+        "prompt_hash": "4d4dd63973769b31d97e306d8c03953da45855d29eb21078c0658eb03d5a4f06",
+        "target_hash": "4d4dd63973769b31d97e306d8c03953da45855d29eb21078c0658eb03d5a4f06",
+        "bits_per_byte": [
+          -128.625,
+          163
+        ]
+      },
+      {
+        "doc_id": 6,
+        "doc": {
+          "id": "financial_0006",
+          "text": "Modem restructuring 2005 restructuring activity consisted of a $0.1 million favorable adjustment to the reserve related to the 2003 sale of the HSP modem product line based on a final negotiation of the California lease liability.",
+          "document_sha256": "91d500b2e73cfbdb4d12fbcc8836fead214c4ba52a8565d8762f8cab967eab93",
+          "capped_document": "Modem restructuring 2005 restructuring activity consisted of a $0.1 million favorable adjustment to the reserve related to the 2003 sale of the HSP modem product line based on a final negotiation of the California lease liability.",
+          "passage_sha256": "91d500b2e73cfbdb4d12fbcc8836fead214c4ba52a8565d8762f8cab967eab93",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "6967"
+        },
+        "target": "Modem restructuring 2005 restructuring activity consisted of a $0.1 million favorable adjustment to the reserve related to the 2003 sale of the HSP modem product line based on a final negotiation of the California lease liability.",
+        "arguments": [
+          [
+            "Modem restructuring 2005 restructuring activity consisted of a $0.1 million favorable adjustment to the reserve related to the 2003 sale of the HSP modem product line based on a final negotiation of the California lease liability."
+          ]
+        ],
+        "resps": [
+          [
+            -215.0
+          ]
+        ],
+        "filtered_resps": [
+          -215.0
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "af68dc334b84df8f1563c84c63d2d7239e7bd11beb1f6138adb482a9f45a519d",
+        "prompt_hash": "91d500b2e73cfbdb4d12fbcc8836fead214c4ba52a8565d8762f8cab967eab93",
+        "target_hash": "91d500b2e73cfbdb4d12fbcc8836fead214c4ba52a8565d8762f8cab967eab93",
+        "bits_per_byte": [
+          -215.0,
+          230
+        ]
+      },
+      {
+        "doc_id": 7,
+        "doc": {
+          "id": "financial_0007",
+          "text": "The remaining $100.0 million of the Bridge Facility, which is now terminated, was a revolving facility to be used for our general corporate purposes.",
+          "document_sha256": "1b6bc332def4960e8c59a713fe3e9e7ab07877b1a61ee2ced009e4907ad7a10a",
+          "capped_document": "The remaining $100.0 million of the Bridge Facility, which is now terminated, was a revolving facility to be used for our general corporate purposes.",
+          "passage_sha256": "1b6bc332def4960e8c59a713fe3e9e7ab07877b1a61ee2ced009e4907ad7a10a",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "7189"
+        },
+        "target": "The remaining $100.0 million of the Bridge Facility, which is now terminated, was a revolving facility to be used for our general corporate purposes.",
+        "arguments": [
+          [
+            "The remaining $100.0 million of the Bridge Facility, which is now terminated, was a revolving facility to be used for our general corporate purposes."
+          ]
+        ],
+        "resps": [
+          [
+            -114.3125
+          ]
+        ],
+        "filtered_resps": [
+          -114.3125
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "abbcda044181f910d352cb9a9a8da32f4d47c39535b1c548f3bee9b4e9ad70fd",
+        "prompt_hash": "1b6bc332def4960e8c59a713fe3e9e7ab07877b1a61ee2ced009e4907ad7a10a",
+        "target_hash": "1b6bc332def4960e8c59a713fe3e9e7ab07877b1a61ee2ced009e4907ad7a10a",
+        "bits_per_byte": [
+          -114.3125,
+          149
+        ]
+      },
+      {
+        "doc_id": 8,
+        "doc": {
+          "id": "financial_0008",
+          "text": "Finally, we received a net $17 million related to a transaction with Broadcom Corporation for certain U.S. and international patents.",
+          "document_sha256": "3793cfe1196864ffa38e368bb6cac3a74116a29d9f55464cb10ed10310d5886d",
+          "capped_document": "Finally, we received a net $17 million related to a transaction with Broadcom Corporation for certain U.S. and international patents.",
+          "passage_sha256": "3793cfe1196864ffa38e368bb6cac3a74116a29d9f55464cb10ed10310d5886d",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "5867"
+        },
+        "target": "Finally, we received a net $17 million related to a transaction with Broadcom Corporation for certain U.S. and international patents.",
+        "arguments": [
+          [
+            "Finally, we received a net $17 million related to a transaction with Broadcom Corporation for certain U.S. and international patents."
+          ]
+        ],
+        "resps": [
+          [
+            -105.375
+          ]
+        ],
+        "filtered_resps": [
+          -105.375
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "e60c63335611a4dc057588b6326769cb9d1b87afc4fd913b31f3e1259871ef95",
+        "prompt_hash": "3793cfe1196864ffa38e368bb6cac3a74116a29d9f55464cb10ed10310d5886d",
+        "target_hash": "3793cfe1196864ffa38e368bb6cac3a74116a29d9f55464cb10ed10310d5886d",
+        "bits_per_byte": [
+          -105.375,
+          133
+        ]
+      },
+      {
+        "doc_id": 9,
+        "doc": {
+          "id": "financial_0009",
+          "text": "Premiums for Fiscal 2012 are not comparable to the Fiscal 2011 premiums of $39.0 million which reflect only the approximate six month period subsequent to the FGH acquisition on April 6, 2011.",
+          "document_sha256": "89c13f52d32b092cdc6ed8b7137bf9c81eaf9442ed2c853cf98d21d7e3c00d1f",
+          "capped_document": "Premiums for Fiscal 2012 are not comparable to the Fiscal 2011 premiums of $39.0 million which reflect only the approximate six month period subsequent to the FGH acquisition on April 6, 2011.",
+          "passage_sha256": "89c13f52d32b092cdc6ed8b7137bf9c81eaf9442ed2c853cf98d21d7e3c00d1f",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "11143"
+        },
+        "target": "Premiums for Fiscal 2012 are not comparable to the Fiscal 2011 premiums of $39.0 million which reflect only the approximate six month period subsequent to the FGH acquisition on April 6, 2011.",
+        "arguments": [
+          [
+            "Premiums for Fiscal 2012 are not comparable to the Fiscal 2011 premiums of $39.0 million which reflect only the approximate six month period subsequent to the FGH acquisition on April 6, 2011."
+          ]
+        ],
+        "resps": [
+          [
+            -169.875
+          ]
+        ],
+        "filtered_resps": [
+          -169.875
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "273dc9ebaa4539adb25f82377ce65f01b8494403406fb3edd3676321d6d3ff55",
+        "prompt_hash": "89c13f52d32b092cdc6ed8b7137bf9c81eaf9442ed2c853cf98d21d7e3c00d1f",
+        "target_hash": "89c13f52d32b092cdc6ed8b7137bf9c81eaf9442ed2c853cf98d21d7e3c00d1f",
+        "bits_per_byte": [
+          -169.875,
+          192
+        ]
+      },
+      {
+        "doc_id": 10,
+        "doc": {
+          "id": "financial_0010",
+          "text": "As of September 30, 2012 and 2011, FGL’s investment portfolio, including asset-backed loans originated by Salus, was approximately $16.7 billion and $15.8 billion, respectively, and was divided among the following asset classes (dollars in millions): Fixed Maturity Securities Insurance statutes regulate the type of investments that FGL’s life insurance subsidiaries are permitted to make and limit the amount of funds that may be used for any one type of investment.",
+          "document_sha256": "401aeadf1e7c3daaf9b7e8ceaf42c704a8005b814c6bf70af5e9ca55c3735060",
+          "capped_document": "As of September 30, 2012 and 2011, FGL’s investment portfolio, including asset-backed loans originated by Salus, was approximately $16.7 billion and $15.8 billion, respectively, and was divided among the following asset classes (dollars in millions): Fixed Maturity Securities Insurance statutes regulate the type of investments that FGL’s life insurance subsidiaries are permitted to make and limit the amount of funds that may be used for any one type of investment.",
+          "passage_sha256": "401aeadf1e7c3daaf9b7e8ceaf42c704a8005b814c6bf70af5e9ca55c3735060",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "10451"
+        },
+        "target": "As of September 30, 2012 and 2011, FGL’s investment portfolio, including asset-backed loans originated by Salus, was approximately $16.7 billion and $15.8 billion, respectively, and was divided among the following asset classes (dollars in millions): Fixed Maturity Securities Insurance statutes regulate the type of investments that FGL’s life insurance subsidiaries are permitted to make and limit the amount of funds that may be used for any one type of investment.",
+        "arguments": [
+          [
+            "As of September 30, 2012 and 2011, FGL’s investment portfolio, including asset-backed loans originated by Salus, was approximately $16.7 billion and $15.8 billion, respectively, and was divided among the following asset classes (dollars in millions): Fixed Maturity Securities Insurance statutes regulate the type of investments that FGL’s life insurance subsidiaries are permitted to make and limit the amount of funds that may be used for any one type of investment."
+          ]
+        ],
+        "resps": [
+          [
+            -293.5
+          ]
+        ],
+        "filtered_resps": [
+          -293.5
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "830e4fb0e36377a059530acd97f81f29fb3801ad645eeba95507ef23e3ebfe21",
+        "prompt_hash": "401aeadf1e7c3daaf9b7e8ceaf42c704a8005b814c6bf70af5e9ca55c3735060",
+        "target_hash": "401aeadf1e7c3daaf9b7e8ceaf42c704a8005b814c6bf70af5e9ca55c3735060",
+        "bits_per_byte": [
+          -293.5,
+          472
+        ]
+      },
+      {
+        "doc_id": 11,
+        "doc": {
+          "id": "financial_0011",
+          "text": "This was primarily the result of the benefit recorded in conjunction with the recognition of the $15.7 million loss resulting from the hurricanes.",
+          "document_sha256": "e55170454b0147d8858237b7abaa406c00072898d414995dc5b84ca631b5c920",
+          "capped_document": "This was primarily the result of the benefit recorded in conjunction with the recognition of the $15.7 million loss resulting from the hurricanes.",
+          "passage_sha256": "e55170454b0147d8858237b7abaa406c00072898d414995dc5b84ca631b5c920",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "5469"
+        },
+        "target": "This was primarily the result of the benefit recorded in conjunction with the recognition of the $15.7 million loss resulting from the hurricanes.",
+        "arguments": [
+          [
+            "This was primarily the result of the benefit recorded in conjunction with the recognition of the $15.7 million loss resulting from the hurricanes."
+          ]
+        ],
+        "resps": [
+          [
+            -108.8125
+          ]
+        ],
+        "filtered_resps": [
+          -108.8125
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "4d85fc1f12148121bff94a29c6c9c77c8cf8267811a89cbc1a10b1c60ec55022",
+        "prompt_hash": "e55170454b0147d8858237b7abaa406c00072898d414995dc5b84ca631b5c920",
+        "target_hash": "e55170454b0147d8858237b7abaa406c00072898d414995dc5b84ca631b5c920",
+        "bits_per_byte": [
+          -108.8125,
+          146
+        ]
+      },
+      {
+        "doc_id": 12,
+        "doc": {
+          "id": "financial_0012",
+          "text": "As a result of the agreement, the Jaldi purchase price allocation was revised to reallocate $1,332 of the excess purchase price over the fair value of the net assets acquired from the assembled workforce asset to a deferred tax charge and a reduction in the deferred tax liability.",
+          "document_sha256": "c52d5256b8a91e7a75e4c337e56aff3ba8181d32ee851d80dae170258f9ad1c8",
+          "capped_document": "As a result of the agreement, the Jaldi purchase price allocation was revised to reallocate $1,332 of the excess purchase price over the fair value of the net assets acquired from the assembled workforce asset to a deferred tax charge and a reduction in the deferred tax liability.",
+          "passage_sha256": "c52d5256b8a91e7a75e4c337e56aff3ba8181d32ee851d80dae170258f9ad1c8",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "4201"
+        },
+        "target": "As a result of the agreement, the Jaldi purchase price allocation was revised to reallocate $1,332 of the excess purchase price over the fair value of the net assets acquired from the assembled workforce asset to a deferred tax charge and a reduction in the deferred tax liability.",
+        "arguments": [
+          [
+            "As a result of the agreement, the Jaldi purchase price allocation was revised to reallocate $1,332 of the excess purchase price over the fair value of the net assets acquired from the assembled workforce asset to a deferred tax charge and a reduction in the deferred tax liability."
+          ]
+        ],
+        "resps": [
+          [
+            -211.75
+          ]
+        ],
+        "filtered_resps": [
+          -211.75
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "e469339546512af97250ed73e9fb5efe62367898f43fd554222dce4a6fd9688e",
+        "prompt_hash": "c52d5256b8a91e7a75e4c337e56aff3ba8181d32ee851d80dae170258f9ad1c8",
+        "target_hash": "c52d5256b8a91e7a75e4c337e56aff3ba8181d32ee851d80dae170258f9ad1c8",
+        "bits_per_byte": [
+          -211.75,
+          281
+        ]
+      },
+      {
+        "doc_id": 13,
+        "doc": {
+          "id": "financial_0013",
+          "text": "As of July 31, 2008, our material short-term cash requirements primarily consisted of working capital needs and the $231.7 million of cash and cash equivalents necessary to complete the acquisition of Radyne.",
+          "document_sha256": "7982b4bf2a5e890b6cda72d778634d9733bee8377c0044edc64b36084ddfe121",
+          "capped_document": "As of July 31, 2008, our material short-term cash requirements primarily consisted of working capital needs and the $231.7 million of cash and cash equivalents necessary to complete the acquisition of Radyne.",
+          "passage_sha256": "7982b4bf2a5e890b6cda72d778634d9733bee8377c0044edc64b36084ddfe121",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "7025"
+        },
+        "target": "As of July 31, 2008, our material short-term cash requirements primarily consisted of working capital needs and the $231.7 million of cash and cash equivalents necessary to complete the acquisition of Radyne.",
+        "arguments": [
+          [
+            "As of July 31, 2008, our material short-term cash requirements primarily consisted of working capital needs and the $231.7 million of cash and cash equivalents necessary to complete the acquisition of Radyne."
+          ]
+        ],
+        "resps": [
+          [
+            -153.125
+          ]
+        ],
+        "filtered_resps": [
+          -153.125
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "1aba72d2c0bd204e62c1a46f119e38b814a119fbc0b43ab7fae4b0316b9e6e08",
+        "prompt_hash": "7982b4bf2a5e890b6cda72d778634d9733bee8377c0044edc64b36084ddfe121",
+        "target_hash": "7982b4bf2a5e890b6cda72d778634d9733bee8377c0044edc64b36084ddfe121",
+        "bits_per_byte": [
+          -153.125,
+          208
+        ]
+      },
+      {
+        "doc_id": 14,
+        "doc": {
+          "id": "financial_0014",
+          "text": "The put strike price of the equity collar is $63.29 and the call strike price of the collar is $77.32.",
+          "document_sha256": "01a911e47c13b1f0c3e6933416e020302f40d8f488000f7eb4c8fbfa02f50240",
+          "capped_document": "The put strike price of the equity collar is $63.29 and the call strike price of the collar is $77.32.",
+          "passage_sha256": "01a911e47c13b1f0c3e6933416e020302f40d8f488000f7eb4c8fbfa02f50240",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "10831"
+        },
+        "target": "The put strike price of the equity collar is $63.29 and the call strike price of the collar is $77.32.",
+        "arguments": [
+          [
+            "The put strike price of the equity collar is $63.29 and the call strike price of the collar is $77.32."
+          ]
+        ],
+        "resps": [
+          [
+            -96.25
+          ]
+        ],
+        "filtered_resps": [
+          -96.25
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "d3e04219df038e1d1867e658bc3cdf10e4a5525460ae5e5343ed060719faf125",
+        "prompt_hash": "01a911e47c13b1f0c3e6933416e020302f40d8f488000f7eb4c8fbfa02f50240",
+        "target_hash": "01a911e47c13b1f0c3e6933416e020302f40d8f488000f7eb4c8fbfa02f50240",
+        "bits_per_byte": [
+          -96.25,
+          102
+        ]
+      },
+      {
+        "doc_id": 15,
+        "doc": {
+          "id": "financial_0015",
+          "text": "Revenue for the year ended December 31, 2005 included cooperative marketing costs of approximately $30,000.",
+          "document_sha256": "99cb29683389971755d2532f8284d3d61b60ac70cdf8f92e8f348a6f49c61ba6",
+          "capped_document": "Revenue for the year ended December 31, 2005 included cooperative marketing costs of approximately $30,000.",
+          "passage_sha256": "99cb29683389971755d2532f8284d3d61b60ac70cdf8f92e8f348a6f49c61ba6",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "6974"
+        },
+        "target": "Revenue for the year ended December 31, 2005 included cooperative marketing costs of approximately $30,000.",
+        "arguments": [
+          [
+            "Revenue for the year ended December 31, 2005 included cooperative marketing costs of approximately $30,000."
+          ]
+        ],
+        "resps": [
+          [
+            -67.375
+          ]
+        ],
+        "filtered_resps": [
+          -67.375
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "8e3b525d50f0af35f9543a148d765da941f4a0038d8c03fb7088393a7520dc9e",
+        "prompt_hash": "99cb29683389971755d2532f8284d3d61b60ac70cdf8f92e8f348a6f49c61ba6",
+        "target_hash": "99cb29683389971755d2532f8284d3d61b60ac70cdf8f92e8f348a6f49c61ba6",
+        "bits_per_byte": [
+          -67.375,
+          107
+        ]
+      },
+      {
+        "doc_id": 16,
+        "doc": {
+          "id": "financial_0016",
+          "text": "Yueyang has approximately $15 million in annual sales and is expected to contribute between $.03 and $.05 per share to our 2006 earnings.",
+          "document_sha256": "033c80a25ead64e37aecc9caf857a4a6e4266a17261ae68cb1a0ab6d98ee3b82",
+          "capped_document": "Yueyang has approximately $15 million in annual sales and is expected to contribute between $.03 and $.05 per share to our 2006 earnings.",
+          "passage_sha256": "033c80a25ead64e37aecc9caf857a4a6e4266a17261ae68cb1a0ab6d98ee3b82",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "5970"
+        },
+        "target": "Yueyang has approximately $15 million in annual sales and is expected to contribute between $.03 and $.05 per share to our 2006 earnings.",
+        "arguments": [
+          [
+            "Yueyang has approximately $15 million in annual sales and is expected to contribute between $.03 and $.05 per share to our 2006 earnings."
+          ]
+        ],
+        "resps": [
+          [
+            -104.3125
+          ]
+        ],
+        "filtered_resps": [
+          -104.3125
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "ec0e36a3e9a1c0232fb73202036e6a8db4f1ffe033cefda01e65a4cea3eda5a4",
+        "prompt_hash": "033c80a25ead64e37aecc9caf857a4a6e4266a17261ae68cb1a0ab6d98ee3b82",
+        "target_hash": "033c80a25ead64e37aecc9caf857a4a6e4266a17261ae68cb1a0ab6d98ee3b82",
+        "bits_per_byte": [
+          -104.3125,
+          137
+        ]
+      },
+      {
+        "doc_id": 17,
+        "doc": {
+          "id": "financial_0017",
+          "text": "Our exposure to loss under such agreements was limited to $0.9 billion at December 31, 2010.",
+          "document_sha256": "2f25c3dfbb969f5983f797c6abed2a4b06b8361a08709845e51eab3cfbe15d24",
+          "capped_document": "Our exposure to loss under such agreements was limited to $0.9 billion at December 31, 2010.",
+          "passage_sha256": "2f25c3dfbb969f5983f797c6abed2a4b06b8361a08709845e51eab3cfbe15d24",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "10082"
+        },
+        "target": "Our exposure to loss under such agreements was limited to $0.9 billion at December 31, 2010.",
+        "arguments": [
+          [
+            "Our exposure to loss under such agreements was limited to $0.9 billion at December 31, 2010."
+          ]
+        ],
+        "resps": [
+          [
+            -89.9375
+          ]
+        ],
+        "filtered_resps": [
+          -89.9375
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "cc572f193d1e38a60e88755a08ae2d8431feaa39512b9aaa7879ad651dc9fce1",
+        "prompt_hash": "2f25c3dfbb969f5983f797c6abed2a4b06b8361a08709845e51eab3cfbe15d24",
+        "target_hash": "2f25c3dfbb969f5983f797c6abed2a4b06b8361a08709845e51eab3cfbe15d24",
+        "bits_per_byte": [
+          -89.9375,
+          92
+        ]
+      },
+      {
+        "doc_id": 18,
+        "doc": {
+          "id": "financial_0018",
+          "text": "On March 30, 2010, we entered into an agreement with EF Energy Partners LLC (“EF Energy”), an Ohio limited liability company, under which it sold to EF Energy a Secured Subordinated Promissory Note (“Subordinated Note”) for the principal amount of $1,150,000.",
+          "document_sha256": "d20c92702d4f326ed8e5da63f5a73e6f94fd54fe3d55e8813f55a89c7fb247d0",
+          "capped_document": "On March 30, 2010, we entered into an agreement with EF Energy Partners LLC (“EF Energy”), an Ohio limited liability company, under which it sold to EF Energy a Secured Subordinated Promissory Note (“Subordinated Note”) for the principal amount of $1,150,000.",
+          "passage_sha256": "d20c92702d4f326ed8e5da63f5a73e6f94fd54fe3d55e8813f55a89c7fb247d0",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "9997"
+        },
+        "target": "On March 30, 2010, we entered into an agreement with EF Energy Partners LLC (“EF Energy”), an Ohio limited liability company, under which it sold to EF Energy a Secured Subordinated Promissory Note (“Subordinated Note”) for the principal amount of $1,150,000.",
+        "arguments": [
+          [
+            "On March 30, 2010, we entered into an agreement with EF Energy Partners LLC (“EF Energy”), an Ohio limited liability company, under which it sold to EF Energy a Secured Subordinated Promissory Note (“Subordinated Note”) for the principal amount of $1,150,000."
+          ]
+        ],
+        "resps": [
+          [
+            -135.75
+          ]
+        ],
+        "filtered_resps": [
+          -135.75
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "c46641546a555a8c7951c03000bd31dd2df9a8ea6c979907e2888c6289e6715a",
+        "prompt_hash": "d20c92702d4f326ed8e5da63f5a73e6f94fd54fe3d55e8813f55a89c7fb247d0",
+        "target_hash": "d20c92702d4f326ed8e5da63f5a73e6f94fd54fe3d55e8813f55a89c7fb247d0",
+        "bits_per_byte": [
+          -135.75,
+          267
+        ]
+      },
+      {
+        "doc_id": 19,
+        "doc": {
+          "id": "financial_0019",
+          "text": "On July 26, 2006, we were approved to receive taxable investment incentives (“Investitionszuschüsse”) of approximately 21.5 million ($31.6 million at the balance sheet close rate on December 29, 2007 of $1.47/ 1.00) from the State of Brandenburg, Germany.",
+          "document_sha256": "25239305df2e5d941944fe2f69dfb2d9536afaabf829a58a00c86879a6fac150",
+          "capped_document": "On July 26, 2006, we were approved to receive taxable investment incentives (“Investitionszuschüsse”) of approximately 21.5 million ($31.6 million at the balance sheet close rate on December 29, 2007 of $1.47/ 1.00) from the State of Brandenburg, Germany.",
+          "passage_sha256": "25239305df2e5d941944fe2f69dfb2d9536afaabf829a58a00c86879a6fac150",
+          "source_label": "10k",
+          "source_file": "10k/stage24_residual_noise_filter_20260701/cleaned_groups/year=ALL__section=section_7__sic2=36.jsonl",
+          "source_index": "7293"
+        },
+        "target": "On July 26, 2006, we were approved to receive taxable investment incentives (“Investitionszuschüsse”) of approximately 21.5 million ($31.6 million at the balance sheet close rate on December 29, 2007 of $1.47/ 1.00) from the State of Brandenburg, Germany.",
+        "arguments": [
+          [
+            "On July 26, 2006, we were approved to receive taxable investment incentives (“Investitionszuschüsse”) of approximately 21.5 million ($31.6 million at the balance sheet close rate on December 29, 2007 of $1.47/ 1.00) from the State of Brandenburg, Germany."
+          ]
+        ],
+        "resps": [
+          [
+            -254.375
+          ]
+        ],
+        "filtered_resps": [
+          -254.375
+        ],
+        "filter": "none",
+        "metrics": [
+          "bits_per_byte"
+        ],
+        "doc_hash": "dc1c7e3b4b3429202198fbe822269cd88a6dd9a8adc7c03fe943b3a6d878f6d2",
+        "prompt_hash": "25239305df2e5d941944fe2f69dfb2d9536afaabf829a58a00c86879a6fac150",
+        "target_hash": "25239305df2e5d941944fe2f69dfb2d9536afaabf829a58a00c86879a6fac150",
+        "bits_per_byte": [
+          -254.375,
+          260
+        ]
+      }
+    ],
+    "financial_qa": [
+      {
+        "doc_id": 0,
+        "doc": {
+          "id": "amount_0000",
+          "document_id": "financial_0000",
+          "context": "Total payables to Harris were $17.9 million and $20.1 million at June 29, 2007 and June 30, 2006.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$17.9 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$17.9 million",
+        "arguments": [
+          [
+            "Passage:\nTotal payables to Harris were $17.9 million and $20.1 million at June 29, 2007 and June 30, 2006.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " The first dollar-denominated amount in the passage was $1.1 million."
+          ]
+        ],
+        "filtered_resps": [
+          " The first dollar-denominated amount in the passage was $1.1 million."
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "a77ce64f6e64c9d2491ad13e81210fc44ffaf95d057ef51d64767457d9664039",
+        "prompt_hash": "83a2396a08a195672712b3ee42703a7618d8f606485051017bd330a784fda164",
+        "target_hash": "96df716880489e894da59f581d0b2ce5264de6b1de78f830ed54899b11b34319",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 1,
+        "doc": {
+          "id": "amount_0001",
+          "document_id": "financial_0001",
+          "context": "In 2006, we also borrowed $0.8 million for working capital needs in Ireland and China.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$0.8 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$0.8 million",
+        "arguments": [
+          [
+            "Passage:\nIn 2006, we also borrowed $0.8 million for working capital needs in Ireland and China.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " $1,000,000."
+          ]
+        ],
+        "filtered_resps": [
+          " $1,000,000."
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "92f484517667a0d47e87278430145b1ee82d0b1bf56c6b87d2b1cba6761858a4",
+        "prompt_hash": "f55e574d88519fb734a1fec50a637c231ef82f0e22229e31418c8f926f4ef459",
+        "target_hash": "cf46c642df449526d242720080b96616a477bee603e161d75efeebc5b9d91a60",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 2,
+        "doc": {
+          "id": "amount_0002",
+          "document_id": "financial_0002",
+          "context": "Revenues from the sale of DBS products of the Pre-existing Products Division declined by $15,376,000, or 9%, while sales of other wireless products and services increased by $4,516,000 year-over-year.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$15,376,000,"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$15,376,000,",
+        "arguments": [
+          [
+            "Passage:\nRevenues from the sale of DBS products of the Pre-existing Products Division declined by $15,376,000, or 9%, while sales of other wireless products and services increased by $4,516,000 year-over-year.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " $1,000,000"
+          ]
+        ],
+        "filtered_resps": [
+          " $1,000,000"
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "6432b12766c39ed0f53238a250062af54056e613f7d69cd4fa478f3d8eccd3fa",
+        "prompt_hash": "41d1f798341a497add7ffee63210684462063bab94eb602d097338ef91c2b26f",
+        "target_hash": "ce851c9c0b2dbe7ba155867d4ec731b419c37637f47f6c483e2a33cbb04ef689",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 3,
+        "doc": {
+          "id": "amount_0003",
+          "document_id": "financial_0003",
+          "context": "The increase was primarily due to (i) $1.0 million higher commission and bonus accrual based on improved company performance, (ii) $346,000 higher accounting fees for the integrated audit including the SOX audit for 2010, which was not required for 2009, (iii) $283,000 higher legal fees incurred in fourth quarter of 2010 to conclude the royalty negotiation with Sumitomo, partially offset by (iv) $567,000 lower legal fees as certain legal fees incurred in 2009 did not recur in 2010, and (v) $376,000 lower severance cost.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$1.0 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$1.0 million",
+        "arguments": [
+          [
+            "Passage:\nThe increase was primarily due to (i) $1.0 million higher commission and bonus accrual based on improved company performance, (ii) $346,000 higher accounting fees for the integrated audit including the SOX audit for 2010, which was not required for 2009, (iii) $283,000 higher legal fees incurred in fourth quarter of 2010 to conclude the royalty negotiation with Sumitomo, partially offset by (iv) $567,000 lower legal fees as certain legal fees incurred in 2009 did not recur in 2010, and (v) $376,000 lower severance cost.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " $1,000,000"
+          ]
+        ],
+        "filtered_resps": [
+          " $1,000,000"
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "95f4553336b9ed4fcebac025beb47204603692ceac90772a444de95aec9e37a8",
+        "prompt_hash": "c8f35aae14338555af38bb86e2ab28e1c949bb6f742ad5d737458d56bc8b8618",
+        "target_hash": "09ab8112811e636bb3b8ca6bca6f2257c21ba5606db27a30f25299fe1d035b54",
+        "acc": 1.0
+      },
+      {
+        "doc_id": 4,
+        "doc": {
+          "id": "amount_0004",
+          "document_id": "financial_0004",
+          "context": "The adjustments of $9 million reflect: (i) $8 million of reversals of accruals no longer needed, and (ii) $1 million of translation adjustments.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$9 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$9 million",
+        "arguments": [
+          [
+            "Passage:\nThe adjustments of $9 million reflect: (i) $8 million of reversals of accruals no longer needed, and (ii) $1 million of translation adjustments.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " $9,000,000."
+          ]
+        ],
+        "filtered_resps": [
+          " $9,000,000."
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "b127f0c959d65785a8def04f32bd6b8a1f9c62345e669457015af0812a39e24c",
+        "prompt_hash": "6cb960eb393a1e48778f105c7d967d63a5c36d8c77f2061b1fc60b826c6bd150",
+        "target_hash": "c7e844477746e60eace11ec934348bc34886da200cd78b3702126192d7dce0da",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 5,
+        "doc": {
+          "id": "amount_0005",
+          "document_id": "financial_0005",
+          "context": "Koobe Inc. shipped a small number of eReaders to the Chinese market at the end of December 2010 and we recognized approximately $3,000 in revenue from these sales.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$3,000"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$3,000",
+        "arguments": [
+          [
+            "Passage:\nKoobe Inc. shipped a small number of eReaders to the Chinese market at the end of December 2010 and we recognized approximately $3,000 in revenue from these sales.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            ""
+          ]
+        ],
+        "filtered_resps": [
+          ""
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "d04f90208ade7332050b5c406d9e9b74d1f71b7c395f53a2f52767dc3a1ee077",
+        "prompt_hash": "ef417c4e7540c16732254b6d2d1d1f172bfacb0a521efd49cfdab25b1a8cca65",
+        "target_hash": "50e5c930578954e631f9c75bfe0ef0b7d0f0b5c27638d20ec1049649881f0acc",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 6,
+        "doc": {
+          "id": "amount_0006",
+          "document_id": "financial_0006",
+          "context": "Modem restructuring 2005 restructuring activity consisted of a $0.1 million favorable adjustment to the reserve related to the 2003 sale of the HSP modem product line based on a final negotiation of the California lease liability.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$0.1 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$0.1 million",
+        "arguments": [
+          [
+            "Passage:\nModem restructuring 2005 restructuring activity consisted of a $0.1 million favorable adjustment to the reserve related to the 2003 sale of the HSP modem product line based on a final negotiation of the California lease liability.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " $0.1 million."
+          ]
+        ],
+        "filtered_resps": [
+          " $0.1 million."
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "e34f6411c9cc058e4b99d5c78e417c000b973d1bd533ab9d29e6b52da41307b8",
+        "prompt_hash": "5ab1e0498d881608c6078c5740aca2f678053dbff20e668eb8996947b81c56ea",
+        "target_hash": "2cffa4174bc8190c8daf79cbbd77b9699b5e231a5f93fe3ebdde7b0ba139da72",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 7,
+        "doc": {
+          "id": "amount_0007",
+          "document_id": "financial_0007",
+          "context": "The remaining $100.0 million of the Bridge Facility, which is now terminated, was a revolving facility to be used for our general corporate purposes.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$100.0 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$100.0 million",
+        "arguments": [
+          [
+            "Passage:\nThe remaining $100.0 million of the Bridge Facility, which is now terminated, was a revolving facility to be used for our general corporate purposes.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " The first dollar-denominated amount in the passage is $100.0 million."
+          ]
+        ],
+        "filtered_resps": [
+          " The first dollar-denominated amount in the passage is $100.0 million."
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "bd9cdf933009be79814d86ba319d52bf32172c1ba52f4a8df9b354825c74db30",
+        "prompt_hash": "5553d7860bbe105823c541abf2bc14645a37bb8eac2fafd5d12b34e8228af705",
+        "target_hash": "bfd4374d5d1d706cc746b0c8c0bf5869def3dea4358d87a500666a196147883e",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 8,
+        "doc": {
+          "id": "amount_0008",
+          "document_id": "financial_0008",
+          "context": "Finally, we received a net $17 million related to a transaction with Broadcom Corporation for certain U.S. and international patents.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$17 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$17 million",
+        "arguments": [
+          [
+            "Passage:\nFinally, we received a net $17 million related to a transaction with Broadcom Corporation for certain U.S. and international patents.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " $17 million."
+          ]
+        ],
+        "filtered_resps": [
+          " $17 million."
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "06f6e7469f0fbb395424ee68ecefe3fd5a71441269dc9ce6fe9e2a87e7f9c3d6",
+        "prompt_hash": "8da0afaeda7d7d9c4adae13947fd40e92f87633d5d9179809279ab051245a037",
+        "target_hash": "5038a9c13ffce1e731bc8c61b2d9e9dde6d6dafcd4431f043b089457d273a62d",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 9,
+        "doc": {
+          "id": "amount_0009",
+          "document_id": "financial_0009",
+          "context": "Premiums for Fiscal 2012 are not comparable to the Fiscal 2011 premiums of $39.0 million which reflect only the approximate six month period subsequent to the FGH acquisition on April 6, 2011.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$39.0 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$39.0 million",
+        "arguments": [
+          [
+            "Passage:\nPremiums for Fiscal 2012 are not comparable to the Fiscal 2011 premiums of $39.0 million which reflect only the approximate six month period subsequent to the FGH acquisition on April 6, 2011.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            ""
+          ]
+        ],
+        "filtered_resps": [
+          ""
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "217bc978744cb2b2fa75f4b8790597ea1ac02066b9472eef9eb65c5690122caf",
+        "prompt_hash": "bc28d45b597ee2af15fadff0a0b69416089d8010eb0874387c99e50ba22695cb",
+        "target_hash": "d560627b75554e35d15eef654868e36a628da595aceeeb6e2646c51feef7037a",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 10,
+        "doc": {
+          "id": "amount_0010",
+          "document_id": "financial_0010",
+          "context": "As of September 30, 2012 and 2011, FGL’s investment portfolio, including asset-backed loans originated by Salus, was approximately $16.7 billion and $15.8 billion, respectively, and was divided among the following asset classes (dollars in millions): Fixed Maturity Securities Insurance statutes regulate the type of investments that FGL’s life insurance subsidiaries are permitted to make and limit the amount of funds that may be used for any one type of investment.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$16.7 billion"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$16.7 billion",
+        "arguments": [
+          [
+            "Passage:\nAs of September 30, 2012 and 2011, FGL’s investment portfolio, including asset-backed loans originated by Salus, was approximately $16.7 billion and $15.8 billion, respectively, and was divided among the following asset classes (dollars in millions): Fixed Maturity Securities Insurance statutes regulate the type of investments that FGL’s life insurance subsidiaries are permitted to make and limit the amount of funds that may be used for any one type of investment.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            ""
+          ]
+        ],
+        "filtered_resps": [
+          ""
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "fcc310d534e4799fbcacb94cddcd642a6051a0dd7caf12a050f1531bdc6751f2",
+        "prompt_hash": "c88c827be7ea5a38dbc9915bf9cc5eeab0f1d8080299063c2c429c6648f9eb7a",
+        "target_hash": "913fefdff9e8ca2202daf6bcaa418254360c10c41341f1e17f46c302fd49f19d",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 11,
+        "doc": {
+          "id": "amount_0011",
+          "document_id": "financial_0011",
+          "context": "This was primarily the result of the benefit recorded in conjunction with the recognition of the $15.7 million loss resulting from the hurricanes.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$15.7 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$15.7 million",
+        "arguments": [
+          [
+            "Passage:\nThis was primarily the result of the benefit recorded in conjunction with the recognition of the $15.7 million loss resulting from the hurricanes.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " $15.7 million"
+          ]
+        ],
+        "filtered_resps": [
+          " $15.7 million"
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "ba88b5eb6b4182543fa4439ee1d5ae2f8a70cd326211601ec9f59edbdfcdd93c",
+        "prompt_hash": "3701c81e87e4cf6bb935beb6baa0afae633a539799ea7781b354225e0ccdd201",
+        "target_hash": "d02f03b462c925416706a3997011c84ec8800b1c850a970b9eac021e29289ae0",
+        "acc": 1.0
+      },
+      {
+        "doc_id": 12,
+        "doc": {
+          "id": "amount_0012",
+          "document_id": "financial_0012",
+          "context": "As a result of the agreement, the Jaldi purchase price allocation was revised to reallocate $1,332 of the excess purchase price over the fair value of the net assets acquired from the assembled workforce asset to a deferred tax charge and a reduction in the deferred tax liability.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$1,332"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$1,332",
+        "arguments": [
+          [
+            "Passage:\nAs a result of the agreement, the Jaldi purchase price allocation was revised to reallocate $1,332 of the excess purchase price over the fair value of the net assets acquired from the assembled workforce asset to a deferred tax charge and a reduction in the deferred tax liability.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " The first dollar-denominated amount in the passage is $1,332."
+          ]
+        ],
+        "filtered_resps": [
+          " The first dollar-denominated amount in the passage is $1,332."
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "13a51bf943129a6ce12c933b14ef180defca65df9540a6fa8f5fd7713bb0a2fa",
+        "prompt_hash": "555d445d0bd1a4015e2844efbccf1399d4ba97195a12b35aeceb304c0c799013",
+        "target_hash": "2ff95acee76144cee0d1bf2eafe658decbffea6102e2b0adc9c06fc29d723d9e",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 13,
+        "doc": {
+          "id": "amount_0013",
+          "document_id": "financial_0013",
+          "context": "As of July 31, 2008, our material short-term cash requirements primarily consisted of working capital needs and the $231.7 million of cash and cash equivalents necessary to complete the acquisition of Radyne.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$231.7 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$231.7 million",
+        "arguments": [
+          [
+            "Passage:\nAs of July 31, 2008, our material short-term cash requirements primarily consisted of working capital needs and the $231.7 million of cash and cash equivalents necessary to complete the acquisition of Radyne.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            ""
+          ]
+        ],
+        "filtered_resps": [
+          ""
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "89a894d0aa0ddbf6b8c912fd724d12d4b88cc9506a512b33a99cd94f290e8747",
+        "prompt_hash": "f4e5f0bc8c6b305b55d02cf68a8e59a48e76f87a099a8870e450ee2915cf0295",
+        "target_hash": "a149887cd224ba5a5a5269d44d0938fa55710ff05f1c3b97cf6aca96b84623d7",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 14,
+        "doc": {
+          "id": "amount_0014",
+          "document_id": "financial_0014",
+          "context": "The put strike price of the equity collar is $63.29 and the call strike price of the collar is $77.32.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$63.29"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$63.29",
+        "arguments": [
+          [
+            "Passage:\nThe put strike price of the equity collar is $63.29 and the call strike price of the collar is $77.32.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            ""
+          ]
+        ],
+        "filtered_resps": [
+          ""
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "c5456d70616133533070d854bf12b44a12e81c7313850cc21f4afe31324a5b8d",
+        "prompt_hash": "c6255a4855c7ce163f80f917d38231fead2241d9df3fa15b5f34f8c0414de4d5",
+        "target_hash": "3c425d1793ec73e47a56ee898309e8bb45eccbe89e237d49caceee586a84f6ae",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 15,
+        "doc": {
+          "id": "amount_0015",
+          "document_id": "financial_0015",
+          "context": "Revenue for the year ended December 31, 2005 included cooperative marketing costs of approximately $30,000.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$30,000"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$30,000",
+        "arguments": [
+          [
+            "Passage:\nRevenue for the year ended December 31, 2005 included cooperative marketing costs of approximately $30,000.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " $1,000."
+          ]
+        ],
+        "filtered_resps": [
+          " $1,000."
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "900386d7f8a69848f9604b5503afda293d7167417247da9a61b5c2cb3136309b",
+        "prompt_hash": "3e0d49cd5dd09140150d300d0d4a13377eb02256d6455f7993ebe2feeaba7a8a",
+        "target_hash": "b6b838f2dc6694bc400993035fc497064d7c1ad409d774c5bb83717749cd1f61",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 16,
+        "doc": {
+          "id": "amount_0016",
+          "document_id": "financial_0016",
+          "context": "Yueyang has approximately $15 million in annual sales and is expected to contribute between $.03 and $.05 per share to our 2006 earnings.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$15 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$15 million",
+        "arguments": [
+          [
+            "Passage:\nYueyang has approximately $15 million in annual sales and is expected to contribute between $.03 and $.05 per share to our 2006 earnings.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " $15 million"
+          ]
+        ],
+        "filtered_resps": [
+          " $15 million"
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "ce5522f08f4789f1ae1cdb8606666bdeae5ccf475fb8ca54cf6103ce1c4bb480",
+        "prompt_hash": "24fe323cb03621883819f0baa5fbfc263e089cda4452d6964693e560ee3f47a7",
+        "target_hash": "4ef60dfa20b37bcc6706a3f7c6ea7ee05f269edb7904962a1c4bd6d69eae28ad",
+        "acc": 1.0
+      },
+      {
+        "doc_id": 17,
+        "doc": {
+          "id": "amount_0017",
+          "document_id": "financial_0017",
+          "context": "Our exposure to loss under such agreements was limited to $0.9 billion at December 31, 2010.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$0.9 billion"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$0.9 billion",
+        "arguments": [
+          [
+            "Passage:\nOur exposure to loss under such agreements was limited to $0.9 billion at December 31, 2010.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            ""
+          ]
+        ],
+        "filtered_resps": [
+          ""
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "019ca6f354160d1c4721b8116a32a15c98da393ad648dd409b729d67e56a6c72",
+        "prompt_hash": "f7c0b94726d5c08c59ba37624cc59780fb312d43864e932eb4548754f163014b",
+        "target_hash": "b509406a4f37c222300648bdd003c6a888b95c797e1d02d94bc79525479db080",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 18,
+        "doc": {
+          "id": "amount_0018",
+          "document_id": "financial_0018",
+          "context": "On March 30, 2010, we entered into an agreement with EF Energy Partners LLC (“EF Energy”), an Ohio limited liability company, under which it sold to EF Energy a Secured Subordinated Promissory Note (“Subordinated Note”) for the principal amount of $1,150,000.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$1,150,000"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$1,150,000",
+        "arguments": [
+          [
+            "Passage:\nOn March 30, 2010, we entered into an agreement with EF Energy Partners LLC (“EF Energy”), an Ohio limited liability company, under which it sold to EF Energy a Secured Subordinated Promissory Note (“Subordinated Note”) for the principal amount of $1,150,000.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " The first dollar-denominated amount in the passage is $1,150,000."
+          ]
+        ],
+        "filtered_resps": [
+          " The first dollar-denominated amount in the passage is $1,150,000."
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "18a27cee8457bd8e3983e84508a36d54d14f0a045c253e03f02cb1cbc65f55b9",
+        "prompt_hash": "bfc774d11638c3c872e6e2a22d8fc509c5b8f3c2990d5c5abde77e205fd03da5",
+        "target_hash": "689a60f51ad489808361ab0842fb9a7bbbe3bbedd8a9c25920f7c2794141b72d",
+        "acc": 0.0
+      },
+      {
+        "doc_id": 19,
+        "doc": {
+          "id": "amount_0019",
+          "document_id": "financial_0019",
+          "context": "On July 26, 2006, we were approved to receive taxable investment incentives (“Investitionszuschüsse”) of approximately 21.5 million ($31.6 million at the balance sheet close rate on December 29, 2007 of $1.47/ 1.00) from the State of Brandenburg, Germany.",
+          "question": "What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.",
+          "answers": [
+            "$31.6 million"
+          ],
+          "category": "literal_amount_extraction"
+        },
+        "target": "$31.6 million",
+        "arguments": [
+          [
+            "Passage:\nOn July 26, 2006, we were approved to receive taxable investment incentives (“Investitionszuschüsse”) of approximately 21.5 million ($31.6 million at the balance sheet close rate on December 29, 2007 of $1.47/ 1.00) from the State of Brandenburg, Germany.\n\nQuestion: What is the first dollar-denominated amount in the passage? Copy the amount including $ and any scale word. Return only the amount.\nAnswer:",
+            {
+              "do_sample": false,
+              "max_gen_toks": 48,
+              "until": [
+                "\n"
+              ]
+            }
+          ]
+        ],
+        "resps": [
+          [
+            " The first dollar-denominated amount in the passage is $1,000,000."
+          ]
+        ],
+        "filtered_resps": [
+          " The first dollar-denominated amount in the passage is $1,000,000."
+        ],
+        "filter": "none",
+        "metrics": [
+          "acc"
+        ],
+        "doc_hash": "c8c24e5c49cb6788584a16fc5a22691c2288da3199fa0e9cda05edbb2c2b70dd",
+        "prompt_hash": "5e5e9a412844dc30c9edda18f6d644e2e009006c4fec745cf6974500367ee2a3",
+        "target_hash": "f71670c39df57d0f6048b887027488a38b469b961cb794f6b109a8b41c843116",
+        "acc": 0.0
+      }
+    ]
+  },
+  "config": {
+    "model": "EleutherAI/pythia-410m",
+    "model_args": null,
+    "model_num_parameters": 405334016,
+    "model_dtype": "torch.float16",
+    "model_revision": "main",
+    "model_sha": "",
+    "batch_size": null,
+    "batch_sizes": [],
+    "device": null,
+    "use_cache": null,
+    "limit": null,
+    "bootstrap_iters": 1000,
+    "gen_kwargs": null,
+    "random_seed": 42,
+    "numpy_seed": 42,
+    "torch_seed": 42,
+    "fewshot_seed": 42
+  },
+  "git_hash": null,
+  "date": 1795815755.6632485,
+  "pretty_env_info": "PyTorch version: 2.14.1+cu130\nIs debug build: False\nCUDA used to build PyTorch: 13.0\nROCM used to build PyTorch: N/A\n\nOS: Ubuntu 24.04.4 LTS (x86_64)\nGCC version: (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nClang version: Could not collect\nCMake version: version 3.31.10\nLibc version: glibc-2.39\n\nPython version: 3.13.16 (main, Oct  1 2026, 15:40:24) [GCC 13.3.0] (64-bit runtime)\nPython platform: Linux-6.6.159+-x86_64-with-glibc2.39\nIs CUDA available: True\nCUDA runtime version: 13.0.88\nCUDA_MODULE_LOADING set to: \nGPU models and configuration: GPU 0: Tesla T4\nNvidia driver version: 580.82.07\ncuDNN version: Probably one of the following:\n/usr/lib/x86_64-linux-gnu/libcudnn.so.9.14.0\n/usr/lib/x86_64-linux-gnu/libcudnn_adv.so.9.14.0\n/usr/lib/x86_64-linux-gnu/libcudnn_cnn.so.9.14.0\n/usr/lib/x86_64-linux-gnu/libcudnn_engines_precompiled.so.9.14.0\n/usr/lib/x86_64-linux-gnu/libcudnn_engines_runtime_compiled.so.9.14.0\n/usr/lib/x86_64-linux-gnu/libcudnn_graph.so.9.14.0\n/usr/lib/x86_64-linux-gnu/libcudnn_heuristic.so.9.14.0\n/usr/lib/x86_64-linux-gnu/libcudnn_ops.so.9.14.0\nIs XPU available: False\nHIP runtime version: N/A\nMIOpen runtime version: N/A\nIs XNNPACK available: False\nCaching allocator config: N/A\n\nCPU:\nArchitecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           46 bits physical, 48 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  2\nOn-line CPU(s) list:                     0,1\nVendor ID:                               GenuineIntel\nModel name:                              Intel(R) Xeon(R) CPU @ 2.00GHz\nCPU family:                              6\nModel:                                   85\nThread(s) per core:                      2\nCore(s) per socket:                      1\nSocket(s):                               1\nStepping:                                3\nBogoMIPS:                                4000.40\nFlags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology nonstop_tsc cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch ssbd ibrs ibpb stibp fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm mpx avx512f avx512dq rdseed adx smap clflushopt clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves arat md_clear arch_capabilities\nHypervisor vendor:                       KVM\nVirtualization type:                     full\nL1d cache:                               32 KiB (1 instance)\nL1i cache:                               32 KiB (1 instance)\nL2 cache:                                1 MiB (1 instance)\nL3 cache:                                38.5 MiB (1 instance)\nNUMA node(s):                            1\nNUMA node0 CPU(s):                       0,1\nVulnerability Gather data sampling:      Not affected\nVulnerability Indirect target selection: Vulnerable\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Mitigation; PTE Inversion\nVulnerability Mds:                       Vulnerable; SMT Host state unknown\nVulnerability Meltdown:                  Vulnerable\nVulnerability Mmio stale data:           Vulnerable\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Vulnerable\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Vulnerable\nVulnerability Spectre v1:                Vulnerable: __user pointer sanitization and usercopy barriers only; no swapgs barriers\nVulnerability Spectre v2:                Vulnerable; IBPB: disabled; STIBP: disabled; PBRSB-eIBRS: Not affected; BHI: Vulnerable\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Vulnerable\nVulnerability Vmscape:                   Not affected\n\nVersions of relevant libraries:\n[pip3] intel-cmplr-lib-ur==2025.3.3\n[pip3] intel-openmp==2025.3.3\n[pip3] mkl==2025.3.1\n[pip3] numpy==2.4.6\n[pip3] nvidia-cublas==13.1.1.3\n[pip3] nvidia-cublas-cu12==12.9.3.13\n[pip3] nvidia-cuda-cupti==13.0.85\n[pip3] nvidia-cuda-cupti-cu12==12.9.79\n[pip3] nvidia-cuda-nvrtc==13.0.88\n[pip3] nvidia-cuda-nvrtc-cu12==12.9.86\n[pip3] nvidia-cuda-runtime==13.0.96\n[pip3] nvidia-cuda-runtime-cu12==12.9.79\n[pip3] nvidia-cudnn-cu12==9.28.0.42\n[pip3] nvidia-cudnn-cu13==9.24.0.43\n[pip3] nvidia-cufft==12.0.0.61\n[pip3] nvidia-cufft-cu12==11.4.1.4\n[pip3] nvidia-curand==10.4.0.35\n[pip3] nvidia-curand-cu12==10.3.10.19\n[pip3] nvidia-cusolver==12.0.4.66\n[pip3] nvidia-cusolver-cu12==11.7.5.82\n[pip3] nvidia-cusparse==12.6.3.3\n[pip3] nvidia-cusparse-cu12==12.5.10.65\n[pip3] nvidia-cusparselt-cu13==0.8.1\n[pip3] nvidia-nccl-cu12==2.32.3\n[pip3] nvidia-nccl-cu13==2.30.7\n[pip3] nvidia-nvjitlink==13.4.92\n[pip3] nvidia-nvjitlink-cu12==12.9.86\n[pip3] nvidia-nvtx==13.0.85\n[pip3] nvtx==0.2.16\n[pip3] onemkl-license==2025.3.1\n[pip3] optree==0.20.0\n[pip3] tbb==2022.3.1\n[pip3] tcmlib==1.6.0\n[pip3] torch==2.14.1+cu130\n[pip3] torchao==0.10.0\n[pip3] torchaudio==2.11.0+cu130\n[pip3] torchcodec==0.17.0+cu130\n[pip3] torchdata==0.11.0\n[pip3] torchsummary==1.5.1\n[pip3] torchtune==0.6.1\n[pip3] torchvision==0.29.1+cu130\n[pip3] triton==3.8.0\n[pip3] umf==1.0.3\n[conda] Could not collect",
+  "transformers_version": "4.51.3",
+  "lm_eval_version": "0.4.9",
+  "upper_git_hash": null,
+  "tokenizer_pad_token": [
+    "<|endoftext|>",
+    "0"
+  ],
+  "tokenizer_eos_token": [
+    "<|endoftext|>",
+    "0"
+  ],
+  "tokenizer_bos_token": [
+    "<|endoftext|>",
+    "0"
+  ],
+  "eot_token_id": 0,
+  "max_length": 1024
+}
