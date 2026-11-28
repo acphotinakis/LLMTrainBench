@@ -157,3 +157,24 @@ logs/               Runtime logs
 - [LoRA](docs/modern/lora.md): parameter-efficient adaptation implementation
 
 This README describes the current scratch-training workflow. Older tutorial pages provide background but may need updates to match it.
+
+## Financial evaluation dashboard
+
+The Streamlit dashboard in [ui/financial_dashboard.py](ui/financial_dashboard.py)
+explores saved results from `llm_flow_evaluation/results/`. Select an individual
+**Evaluation test** or **All tests** to aggregate results. Compare baseline and
+adapted models, inspect answers and passage scores, review evaluation time and
+memory, and export filtered results. Aggregate QA accuracy is weighted by question
+count; bits per byte is weighted by UTF-8 bytes.
+
+From the repository root, with your Python environment activated:
+
+```bash
+python -m pip install -r requirements-dashboard.txt
+python -m streamlit run ui/financial_dashboard.py
+```
+
+Open [localhost:8501](http://localhost:8501) after starting the app. The dashboard
+reads saved files and requires no GPU. See the
+[dashboard guide](docs/FINANCIAL_EVALUATION.md#local-results-dashboard) for setup
+and metric details.

@@ -127,3 +127,64 @@ stack. A full Colab evaluation has not been performed during implementation.
 References: [harness v0.4.9](https://github.com/EleutherAI/lm-evaluation-harness/tree/v0.4.9),
 [task interface](https://github.com/EleutherAI/lm-evaluation-harness/blob/v0.4.9/lm_eval/api/task.py),
 [Hugging Face backend](https://github.com/EleutherAI/lm-evaluation-harness/blob/v0.4.9/lm_eval/models/huggingface.py).
+
+## Local results dashboard
+
+Open the saved financial pilot without loading any model, downloading datasets,
+or requiring a GPU. From the repository root:
+
+```bash
+python3 -m venv .venv-dashboard
+source .venv-dashboard/bin/activate
+python -m pip install -r requirements-dashboard.txt
+python -m streamlit run ui/financial_dashboard.py
+```
+
+The dashboard defaults to
+`financial_pilot_v1_20261127_213759_273737`. Use **Evaluation test** in the sidebar to select any saved test under
+`llm_flow_evaluation/results/`, including nested test folders, or **All tests**
+to aggregate them. Folders are discovered automatically on each app rerun. It is also available as
+**Financial Results** when running the existing `ui/app.py` control panel.
+The standalone viewer needs only the dependencies in `requirements-dashboard.txt`.
+
+- **Overview:** QA accuracy, byte-weighted bits per byte, evaluation duration,
+  peak allocated CUDA memory, and a downloadable filtered comparison.
+- **Adaptation impact:** paired changes within a model family; QA changes use
+  percentage points. Missing pairs and mismatched suites/counts are excluded.
+- **Answer explorer:** search saved responses and passages, filter improvements
+  or regressions, and inspect baseline/adapted outputs alongside accepted answers.
+  Correctness comes from the recorded scoring output; responses are not rescored.
+- **Passage scores:** individual BPB values with the source passage. Headline BPB
+  weights by UTF-8 bytes rather than averaging these individual values.
+- **Protocol & provenance:** evaluation settings, model/dataset revisions,
+  adapter hashes, and training configurations.
+
+Global model/configuration filters apply to every results view. An incomplete
+run can still show aggregate scores; missing sample files produce warnings.
+The viewer reads JSON/JSONL only and never executes saved `evaluation_utils.py`
+or code strings inside harness snapshots. Time and memory describe evaluation,
+not training cost. Twenty extraction questions are a pilot, not broad evidence
+of financial reasoning or statistical significance.
+
+Dashboard checks (install `pytest pytest-cov` in the dashboard environment):
+
+```bash
+python -m pytest tests/test_financial_dashboard.py -q
+```
+
+### Aggregating tests
+
+**All tests** pools QA accuracy by question count and recomputes bits per byte
+from the combined saved log likelihoods and UTF-8 byte counts. Pooled BPB is
+unavailable if any contributing passage samples are missing. Evaluation seconds
+are summed; peak allocated GiB is the largest observed allocation. The table
+shows contributing test and suite counts, keeping model IDs and dtypes separate.
+Repeated questions are repeated observations, not additional independent evidence.
+Different suites and adapter checkpoints may contribute, so pooled results are
+exploratory rather than the score of a single fixed checkpoint.
+
+Adaptation deltas remain paired within each original test with matching suite
+hashes and sample counts. The answer, passage, and provenance tabs each offer a
+test selector; question IDs are never joined across tests. JSON/CSV exports retain
+test identity or aggregate counts as appropriate. Unreadable test folders produce
+warnings while other valid tests remain usable.
